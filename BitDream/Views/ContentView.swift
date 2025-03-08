@@ -35,10 +35,22 @@ struct ContentView: View {
                 }
                 .listStyle(PlainListStyle())
                 #else
-                List {
-                    torrentRows
+                ZStack {
+                    // Solid background
+                    Color(NSColor.windowBackgroundColor)
+                        .ignoresSafeArea()
+                    
+                    VStack {
+                        List(selection: $torrentSelection) {
+                            torrentRows
+                        }
+                        .padding(.trailing, 12)
+                        .listStyle(SidebarListStyle())
+                        .background(Color(NSColor.controlBackgroundColor))
+                        .cornerRadius(8)
+                    }
+                    .padding([.horizontal, .bottom])
                 }
-                .padding(.trailing, 12)
                 #endif
             }
             .navigationTitle("Dreams")
@@ -107,17 +119,10 @@ struct ContentView: View {
             NavigationLink(destination: TorrentDetail(store: store, viewContext: viewContext, torrent: binding(for: torrent))) {
                 TorrentListRow(torrent: binding(for: torrent), store: store)
                     .contentShape(Rectangle())
-                    .onTapGesture {
-                        torrentSelection = torrent
-                    }
-                    .listRowSeparator(.hidden)
             }
+            .tag(torrent)
             .listRowSeparator(.visible)
-            .listRowBackground(
-                RoundedRectangle(cornerRadius: 5, style: .continuous)
-                    .fill(torrent == torrentSelection ? Color.accentColor.opacity(0.5) : Color(.clear))
-                    .padding(.leading, 12)
-            )
+            .onChange(of: torrentSelection) { _ in }
             #endif
         }
     }
