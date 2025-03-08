@@ -26,7 +26,6 @@
 		4B1DAE0E295E6FFB0037E9FB /* ErrorDialog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1DAE0D295E6FFB0037E9FB /* ErrorDialog.swift */; };
 		4B1DAE10295E702B0037E9FB /* Store.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1DAE0F295E702B0037E9FB /* Store.swift */; };
 		4B1DAE12295E72040037E9FB /* FileAccess.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1DAE11295E72040037E9FB /* FileAccess.swift */; };
-		4B4377D6295FA9B600133D4A /* ContentViewTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B4377D5295FA9B600133D4A /* ContentViewTest.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -50,7 +49,6 @@
 		4B1DAE0D295E6FFB0037E9FB /* ErrorDialog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorDialog.swift; sourceTree = "<group>"; };
 		4B1DAE0F295E702B0037E9FB /* Store.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Store.swift; sourceTree = "<group>"; };
 		4B1DAE11295E72040037E9FB /* FileAccess.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileAccess.swift; sourceTree = "<group>"; };
-		4B4377D5295FA9B600133D4A /* ContentViewTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentViewTest.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -111,7 +109,6 @@
 			isa = PBXGroup;
 			children = (
 				4B1DADE5295E6C440037E9FB /* ContentView.swift */,
-				4B4377D5295FA9B600133D4A /* ContentViewTest.swift */,
 				4B1DAE01295E6FA30037E9FB /* AddTorrent.swift */,
 				4B1DAE03295E6FBC0037E9FB /* FileSelectDialog.swift */,
 				4B1DAE05295E6FC80037E9FB /* TorrentDetail.swift */,
@@ -210,7 +207,6 @@
 			files = (
 				4B1DAE10295E702B0037E9FB /* Store.swift in Sources */,
 				4B1DADE4295E6C440037E9FB /* BitDream.xcdatamodeld in Sources */,
-				4B4377D6295FA9B600133D4A /* ContentViewTest.swift in Sources */,
 				4B1DAE06295E6FC80037E9FB /* TorrentDetail.swift in Sources */,
 				4B1DADDF295E6C440037E9FB /* BitDreamApp.swift in Sources */,
 				4B1DAE0A295E6FE10037E9FB /* ServerDetail.swift in Sources */,
