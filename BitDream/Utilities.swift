@@ -122,11 +122,11 @@ public let byteCountFormatter: ByteCountFormatter = {
  Colors
  -------------------------------------------------------------------------------------------*/
 
-extension Color {
-    static let primary = Color("AccemtColor")
-    static let secondary = Color("SecondaryColor")
-    static let third = Color("ThirdColor")
-}
+// extension Color {
+//     static let primary = Color("AccemtColor")
+//     static let secondary = Color("SecondaryColor")
+//     static let third = Color("ThirdColor")
+// }
 
 /*--------------------------------------------------------------------------------------------
  Refresh transmission data functions
