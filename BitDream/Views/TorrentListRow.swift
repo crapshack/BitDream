@@ -111,6 +111,10 @@ struct TorrentListRow: View {
                 Text("Do you want to delete the file(s) from the disk?")
             }
             .interactiveDismissDisabled(false)
+        .listRowBackground(
+            RoundedRectangle(cornerRadius: 4)
+                .fill(Color.white)
+        )
     }
     
     private var pretext: String {
