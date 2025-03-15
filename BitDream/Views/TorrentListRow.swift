@@ -44,41 +44,109 @@ struct TorrentListRow: View {
         .contentShape(Rectangle())
         .padding([.top, .bottom, .leading, .trailing], 10)
         .contextMenu {
+            // Play/Pause Button
             Button(action: {
                 let info = makeConfig(store: store)
                 playPauseTorrent(torrent: torrent, config: info.config, auth: info.auth, onResponse: { response in
                     // TODO: Handle response
                 })
             }) {
-                Label(torrent.status == TorrentStatus.stopped.rawValue ? "Resume Dream" : "Pause Dream", systemImage: torrent.status == TorrentStatus.stopped.rawValue ? "play" : "pause")
+                #if os(macOS)
+                HStack {
+                    Image(systemName: torrent.status == TorrentStatus.stopped.rawValue ? "play" : "pause")
+                    Text(torrent.status == TorrentStatus.stopped.rawValue ? "Resume Dream" : "Pause Dream")
+                }
+                #else
+                Label(torrent.status == TorrentStatus.stopped.rawValue ? "Resume Dream" : "Pause Dream", 
+                      systemImage: torrent.status == TorrentStatus.stopped.rawValue ? "play" : "pause")
+                #endif
             }
             
+            // Priority Menu
             Menu {
                 Button(action: {
                     updateTorrentPriority(torrent: torrent, priority: TorrentPriority.high, info: makeConfig(store: store), onComplete: { r in })
                 }) {
+                    #if os(macOS)
+                    HStack {
+                        Image(systemName: "hand.point.up")
+                        Text("High")
+                    }
+                    #else
                     Label("High", systemImage: "hand.point.up")
+                    #endif
                 }
                 Button(action: {
                     updateTorrentPriority(torrent: torrent, priority: TorrentPriority.normal, info: makeConfig(store: store), onComplete: { r in })
                 }) {
+                    #if os(macOS)
+                    HStack {
+                        Image(systemName: "hand.raised")
+                        Text("Medium")
+                    }
+                    #else
                     Label("Medium", systemImage: "hand.raised")
+                    #endif
                 }
                 Button(action: {
                     updateTorrentPriority(torrent: torrent, priority: TorrentPriority.low, info: makeConfig(store: store), onComplete: { r in })
                 }) {
+                    #if os(macOS)
+                    HStack {
+                        Image(systemName: "hand.point.down")
+                        Text("Low")
+                    }
+                    #else
                     Label("Low", systemImage: "hand.point.down")
+                    #endif
                 }
             } label: {
+                #if os(macOS)
+                HStack {
+                    Image(systemName: "flag.badge.ellipsis")
+                    Text("Update Priority")
+                }
+                #else
                 Label("Update Priority", systemImage: "flag.badge.ellipsis")
+                #endif
             }
             
             Divider()
             
+            // Copy Magnet Link Button
+            Button(action: {
+                #if os(macOS)
+                let pasteboard = NSPasteboard.general
+                pasteboard.clearContents()
+                pasteboard.setString(torrent.magnetLink, forType: .string)
+                #elseif os(iOS)
+                UIPasteboard.general.string = torrent.magnetLink
+                #endif
+            }) {
+                #if os(macOS)
+                HStack {
+                    Image(systemName: "doc.on.clipboard")
+                    Text("Copy Magnet Link")
+                }
+                #else
+                Label("Copy Magnet Link", systemImage: "doc.on.clipboard")
+                #endif
+            }
+            
+            Divider()
+            
+            // Delete Button
             Button(role: .destructive, action: {
                 deleteDialog.toggle()
             }) {
+                #if os(macOS)
+                HStack {
+                    Image(systemName: "trash")
+                    Text("Delete")
+                }
+                #else
                 Label("Delete", systemImage: "trash")
+                #endif
             }
             
             // Button("Download", action: {
@@ -154,34 +222,27 @@ struct TorrentListRow: View {
     
     private var subtext: String {
         let percentComplete = String(format: "%.1f%%", torrent.percentDone * 100)
-        let downloadedSizeFormatted = byteCountFormatter.string(fromByteCount: (torrent.downloadedCalc))
+        let downloadedSizeFormatted = byteCountFormatter.string(fromByteCount: torrent.downloadedCalc)
         let sizeWhenDoneFormatted = byteCountFormatter.string(fromByteCount: torrent.sizeWhenDone)
-        
-        // formatter for eta remaining time
-        let formatter = DateComponentsFormatter()
-        formatter.allowedUnits = [.day, .hour, .minute, .second]
-        formatter.unitsStyle = .full
-        formatter.includesTimeRemainingPhrase = true
-        formatter.maximumUnitCount = 2
         
         let progressText = "\(downloadedSizeFormatted) of \(sizeWhenDoneFormatted) (\(percentComplete))"
         
-        let etaFormatted = {
-            switch torrent.eta {
-            case -1, -2:
-                return "remaining time unknown"
-            default:
-                return formatter.string(from: TimeInterval(torrent.eta))!
-            }
-        }()
-
-        if torrent.statusCalc == TorrentStatusCalc.downloading {
-            return "\(progressText) - \(etaFormatted)"
+        // Only add ETA for downloading torrents
+        if torrent.statusCalc == .downloading {
+            let formatter = DateComponentsFormatter()
+            formatter.allowedUnits = [.day, .hour, .minute, .second]
+            formatter.unitsStyle = .full
+            formatter.includesTimeRemainingPhrase = true
+            formatter.maximumUnitCount = 2
+            
+            let etaText = torrent.eta < 0 ? "remaining time unknown" : 
+                formatter.string(from: TimeInterval(torrent.eta))!
+            
+            return "\(progressText) - \(etaText)"
         }
-        else {
-            return progressText
-        }
-    }        
+        
+        return progressText
+    }
 
 //    private var fontColor : Color {
 //        if torrent.statusCalc == TorrentStatusCalc.complete {
@@ -199,20 +260,24 @@ struct TorrentListRow: View {
 //    }
     
     private var progressColor: Color {
-        if torrent.statusCalc == TorrentStatusCalc.complete {
+        switch torrent.statusCalc {
+        case .complete, .seeding:
             return .green.opacity(0.75)
-        }
-        else if torrent.statusCalc == TorrentStatusCalc.paused {
+        case .paused:
             return .gray
-        }
-        else if torrent.statusCalc == TorrentStatusCalc.retrievingMetadata {
+        case .retrievingMetadata:
             return .red.opacity(0.75)
-        }
-        else if torrent.statusCalc == TorrentStatusCalc.stalled {
+        case .stalled:
             return .yellow.opacity(0.7)
-        }
-        else {
+        default:
             return .blue.opacity(0.75)
         }
     }
 }
+
+// DEPRECATED: This file has been replaced by platform-specific implementations:
+// - BitDream/Views/Shared/TorrentListRow.swift (shared code)
+// - BitDream/Views/macOS/macOSTorrentListRow.swift (macOS implementation)
+// - BitDream/Views/iOS/iOSTorrentListRow.swift (iOS implementation)
+//
+// Please use those files instead of this one.

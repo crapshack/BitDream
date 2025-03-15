@@ -32,6 +32,8 @@ class Store: NSObject, ObservableObject {
     @Published var debugBrief: String = ""
     @Published var debugMessage: String = ""
     
+    @Published var pollInterval: Double = 5.0 // Default poll interval in seconds
+    
     var timer: Timer = Timer()
     
     public func setHost(host: Host) {
@@ -62,7 +64,7 @@ class Store: NSObject, ObservableObject {
     }
     
     func startTimer() {
-        self.timer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true, block: { _ in
+        self.timer = Timer.scheduledTimer(withTimeInterval: pollInterval, repeats: true, block: { _ in
             DispatchQueue.main.async {
                 updateList(store: self, update: { vals in
                     DispatchQueue.main.async {
@@ -78,5 +80,17 @@ class Store: NSObject, ObservableObject {
                 })
             }
         })
+    }
+    
+    // Add a method to update the poll interval and restart the timer
+    func updatePollInterval(_ newInterval: Double) {
+        // Ensure the interval is at least 1 second
+        pollInterval = max(1.0, newInterval)
+        
+        // Stop the current timer
+        timer.invalidate()
+        
+        // Start a new timer with the updated interval
+        startTimer()
     }
 }

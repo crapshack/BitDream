@@ -5,6 +5,7 @@ import Foundation
 struct macOSSettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var showingThemeSettings = false
+    @ObservedObject var store: Store
     
     var body: some View {
         // macOS version with custom styling to match the screenshot
@@ -13,8 +14,8 @@ struct macOSSettingsView: View {
             Text("Settings")
                 .font(.headline)
                 .frame(maxWidth: .infinity, alignment: .center)
-                .padding(.vertical, 12)
-                .background(Color(white: 0.25))
+                .padding()
+            .background(Color(NSColor.windowBackgroundColor))
             
             // Content
             VStack(alignment: .leading, spacing: 16) {
@@ -22,7 +23,6 @@ struct macOSSettingsView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Appearance")
                         .font(.headline)
-                        .foregroundColor(.white)
                     
                     HStack(spacing: 8) {
                         Button("Theme Settings") {
@@ -43,19 +43,40 @@ struct macOSSettingsView: View {
                 }
                 
                 Divider()
-                    .background(Color.gray.opacity(0.5))
+                
+                // Refresh Settings section
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Refresh Settings")
+                        .font(.headline)
+                    
+                    HStack {
+                        Text("Poll Interval")
+                        Spacer()
+                        Picker("", selection: Binding(
+                            get: { self.store.pollInterval },
+                            set: { self.store.updatePollInterval($0) }
+                        )) {
+                            ForEach(SettingsView.pollIntervalOptions, id: \.self) { interval in
+                                Text(SettingsView.formatInterval(interval)).tag(interval)
+                            }
+                        }
+                        .frame(width: 120)
+                        .pickerStyle(.menu)
+                    }
+                }
+                
+                Divider()
                 
                 // About section
                 VStack(alignment: .leading, spacing: 8) {
                     Text("About")
                         .font(.headline)
-                        .foregroundColor(.white)
                     
                     HStack {
                         Text("Version")
                         Spacer()
                         Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")
-                            .foregroundColor(.gray)
+                            .foregroundColor(.secondary)
                     }
                 }
                 
@@ -71,19 +92,19 @@ struct macOSSettingsView: View {
             }
             .padding()
             .frame(width: 400)
-            .background(Color(white: 0.2))
         }
-        .background(Color(white: 0.2))
         .cornerRadius(8)
     }
 }
 
 #Preview {
-    macOSSettingsView()
+    macOSSettingsView(store: Store())
 }
 #else
 // Empty struct for iOS to reference - this won't be compiled on iOS but provides the type
 struct macOSSettingsView: View {
+    @ObservedObject var store: Store
+    
     var body: some View {
         EmptyView()
     }

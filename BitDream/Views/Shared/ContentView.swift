@@ -21,7 +21,7 @@ extension UserDefaults {
     static let viewStateDefaults: [String: Any] = [
         Keys.sidebarVisibility: true, // true = show sidebar (.all), false = hide sidebar (.detailOnly)
         Keys.inspectorVisibility: true,
-        Keys.sortBySelection: "name" // Default sort by name
+        Keys.sortBySelection: "nameAsc" // Default sort by name ascending
     ]
     
     static func registerViewStateDefaults() {
@@ -44,8 +44,8 @@ extension UserDefaults {
     
     var sortBySelection: sortBy {
         get {
-            let rawValue = string(forKey: Keys.sortBySelection) ?? "name"
-            return sortBy(rawValue: rawValue) ?? .name
+            let rawValue = string(forKey: Keys.sortBySelection) ?? "nameAsc"
+            return sortBy(rawValue: rawValue) ?? .nameAsc
         }
         set {
             set(newValue.rawValue, forKey: Keys.sortBySelection)

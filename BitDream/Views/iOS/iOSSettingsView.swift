@@ -5,6 +5,7 @@ import Foundation
 struct iOSSettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var showingThemeSettings = false
+    @ObservedObject var store: Store
     
     var body: some View {
         // iOS version with standard styling
@@ -29,6 +30,18 @@ struct iOSSettingsView: View {
                     }
                 }
                 
+                Section(header: Text("Refresh Settings")) {
+                    Picker("Poll Interval", selection: Binding(
+                        get: { self.store.pollInterval },
+                        set: { self.store.updatePollInterval($0) }
+                    )) {
+                        ForEach(SettingsView.pollIntervalOptions, id: \.self) { interval in
+                            Text(SettingsView.formatInterval(interval)).tag(interval)
+                        }
+                    }
+                    .pickerStyle(.navigationLink)
+                }
+                
                 Section(header: Text("About")) {
                     HStack {
                         Text("Version")
@@ -51,11 +64,13 @@ struct iOSSettingsView: View {
 }
 
 #Preview {
-    iOSSettingsView()
+    iOSSettingsView(store: Store())
 }
 #else
 // Empty struct for macOS to reference - this won't be compiled on macOS but provides the type
 struct iOSSettingsView: View {
+    @ObservedObject var store: Store
+    
     var body: some View {
         EmptyView()
     }
