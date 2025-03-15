@@ -76,7 +76,7 @@ struct iOSContentView: View {
                 .frame(width: 400, height: 400)
         }
         .sheet(isPresented: $store.showSettings) {
-            SettingsView()
+            SettingsView(store: store)
         }
     }
     
@@ -167,8 +167,8 @@ struct iOSContentView: View {
                         ForEach(sortBy.allCases, id: \.self) { item in
                             Text(item.rawValue)
                         }
-                        .pickerStyle(.automatic)
                     }
+                    .pickerStyle(.automatic)
                 } label: {
                     Text("Sort By")
                     Image(systemName: "arrow.up.arrow.down")
@@ -197,7 +197,7 @@ struct iOSContentView: View {
                 Button(action: {
                     store.isShowingAddAlert.toggle()
                 }) {
-                    Label("Add Torrent", systemImage: "plus")
+                    Label("Add Torrent", systemImage: "document.badge.plus")
                 }
                 
                 Divider()

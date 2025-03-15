@@ -80,33 +80,46 @@ extension Sequence {
 }
 
 public enum sortBy: String, CaseIterable {
-    case name = "Name"
+    case nameAsc = "Name ↑"
+    case nameDesc = "Name ↓"
     case dateAddedAsc = "Date Added ↑"
     case dateAddedDesc = "Date Added ↓"
-    case eta = "Remaining Time ↑"
-    case status = "Status"
+    case etaAsc = "Remaining Time ↑"
+    case etaDesc = "Remaining Time ↓"
+    case statusAsc = "Status ↑"
+    case statusDesc = "Status ↓"
 }
 
 func sortTorrents(_ torrents: [Torrent], sortBy: sortBy) -> [Torrent] {
-    // we will always sort by name first
+    // Create a base sorted list by name (ascending) for consistent secondary sorting
     let sortedList = torrents.sortedAscending(using: .keyPath(\.name))
 
     switch sortBy {
-    case .name:
-        return sortedList
+    case .nameAsc:
+        return torrents.sortedAscending(using: .keyPath(\.name))
+    case .nameDesc:
+        return torrents.sortedDescending(using: .keyPath(\.name))
     case .dateAddedAsc:
         return sortedList.sortedAscending(using: .keyPath(\.addedDate))
     case .dateAddedDesc:
         return sortedList.sortedDescending(using: .keyPath(\.addedDate))
-    case .eta:
+    case .statusAsc:
+        return sortedList.sortedAscending(using: .keyPath(\.statusCalc.rawValue))
+    case .statusDesc:
+        return sortedList.sortedDescending(using: .keyPath(\.statusCalc.rawValue))
+    case .etaAsc, .etaDesc:
+        // Determine if we're sorting ascending or descending
+        let ascending = sortBy == .etaAsc
+        
         // Simple custom sorting that prioritizes active torrents with valid ETAs
         // and puts completed, paused, and stalled at the bottom
         return sortedList.sorted { a, b in
             // Helper function to get sort priority (lower number = higher priority)
             func getPriority(_ torrent: Torrent) -> Int {
-                if torrent.statusCalc == .complete { return 4 }      // Lowest priority
-                if torrent.statusCalc == .paused { return 3 }        // Second lowest
-                if torrent.statusCalc == .stalled { return 2 }       // Third lowest
+                if torrent.statusCalc == .complete { return 5 }      // Lowest priority
+                if torrent.statusCalc == .seeding { return 4 }       // Second priority
+                if torrent.statusCalc == .paused { return 3 }        // Third lowest
+                if torrent.statusCalc == .stalled { return 2 }       // Fourth lowest
                 if torrent.eta <= 0 { return 1 }                     // Unknown ETA but active
                 return 0                                             // Active with valid ETA
             }
@@ -121,14 +134,12 @@ func sortTorrents(_ torrents: [Torrent], sortBy: sortBy) -> [Torrent] {
             
             // If both are active with valid ETAs, sort by ETA
             if priorityA == 0 && priorityB == 0 {
-                return a.eta < b.eta
+                return ascending ? (a.eta < b.eta) : (a.eta > b.eta)
             }
             
             // Otherwise maintain name-based sort
             return true
         }
-    case .status:
-        return sortedList.sortedAscending(using: .keyPath(\.statusCalc.rawValue))
     }
 }
 

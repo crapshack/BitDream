@@ -21,10 +21,16 @@ struct macOSContentView: View {
     @State private var sidebarSelection: SidebarSelection = .allDreams
     @State private var isInspectorVisible: Bool = UserDefaults.standard.inspectorVisibility
     @State private var columnVisibility: NavigationSplitViewVisibility = UserDefaults.standard.sidebarVisibility
+    @State private var searchText: String = ""
+    @State private var titleRefreshTrigger: Bool = false
     
     // Computed property to get counts for each category
     private func torrentCount(for category: SidebarSelection) -> Int {
-        return store.torrents.filtered(by: category.filter).count
+        let filteredByCategory = store.torrents.filtered(by: category.filter)
+        let filteredBySearch = filteredByCategory.filter { 
+            searchText.isEmpty ? true : $0.name.localizedCaseInsensitiveContains(searchText) 
+        }
+        return filteredBySearch.count
     }
     
     // Computed property to get completed torrents count
@@ -35,6 +41,12 @@ struct macOSContentView: View {
     // Update the app badge
     private func updateAppBadge() {
         updateMacOSAppBadge(count: completedTorrentsCount)
+    }
+    
+    // Computed property for navigation subtitle
+    private var navigationSubtitle: String {
+        let count = torrentCount(for: sidebarSelection)
+        return "\(count) dream\(count == 1 ? "" : "s")"
     }
     
     var body: some View {       
@@ -108,6 +120,7 @@ struct macOSContentView: View {
                         } else {
                             // Break up the complex expression into steps
                             let filteredTorrents = store.torrents.filtered(by: filterBySelection)
+                                .filter { searchText.isEmpty ? true : $0.name.localizedCaseInsensitiveContains(searchText) }
                             let sortedTorrents = filteredTorrents.sorted(by: sortBySelection)
                             
                             ForEach(sortedTorrents, id: \.id) { torrent in
@@ -126,54 +139,79 @@ struct macOSContentView: View {
                     .listStyle(PlainListStyle())
                 }
             }
-            .navigationTitle("Dreams")
-            .toolbar {
+            .navigationTitle(titleRefreshTrigger ? sidebarSelection.rawValue : sidebarSelection.rawValue)
+            .navigationSubtitle(titleRefreshTrigger ? navigationSubtitle : navigationSubtitle)
+            .searchable(text: $searchText, placement: .toolbar)
+            .toolbar {              
                 // Content toolbar items
                 ToolbarItem(placement: .automatic) {
-                    HStack {
-                        Text("Sort by:")
-                        Picker("", selection: $sortBySelection) {
-                            ForEach(sortBy.allCases, id: \.self) { item in
-                                Text(item.rawValue).tag(item)
-                            }
+                    Picker("", selection: $sortBySelection) {
+                        Group {
+                            Text("Name ↑").tag(sortBy.nameAsc)
+                            Text("Name ↓").tag(sortBy.nameDesc)
                         }
-                        .labelsHidden()
+                        
+                        Divider()
+                        
+                        Group {
+                            Text("Date Added ↑").tag(sortBy.dateAddedAsc)
+                            Text("Date Added ↓").tag(sortBy.dateAddedDesc)
+                        }
+                        
+                        Divider()
+                        
+                        Group {
+                            Text("Status ↑").tag(sortBy.statusAsc)
+                            Text("Status ↓").tag(sortBy.statusDesc)
+                        }
+                        
+                        Divider()
+                        
+                        Group {
+                            Text("Remaining Time ↑").tag(sortBy.etaAsc)
+                            Text("Remaining Time ↓").tag(sortBy.etaDesc)
+                        }
                     }
-                    .help("Sort torrents")
+                    .help("Sort by")
                 }
-                
+
                 // Add torrent button
-                ToolbarItem(placement: .automatic) {
+                ToolbarItem(placement: .primaryAction) {
                     Button(action: {
                         store.isShowingAddAlert.toggle()
                     }) {
-                        Label("Add Torrent", systemImage: "plus")
+                        Label("Add Torrent", systemImage: "document.badge.plus")
                     }
                     .help("Add a new torrent")
                 }
                 
-                // Pause all button
-                ToolbarItem(placement: .automatic) {
-                    Button(action: {
-                        playPauseAllTorrents(start: false, info: makeConfig(store: store), onResponse: { response in
-                            updateList(store: store, update: {_ in})
-                        })
-                    }) {
-                        Label("Pause All", systemImage: "pause")
-                    }
-                    .help("Pause all active torrents")
-                }
+                // // Pause all button
+                // ToolbarItem(placement: .automatic) {
+                //     Button(action: {
+                //         playPauseAllTorrents(start: false, info: makeConfig(store: store), onResponse: { response in
+                //             updateList(store: store, update: {_ in})
+                //         })
+                //     }) {
+                //         Label("Pause All", systemImage: "pause")
+                //     }
+                //     .help("Pause all active torrents")
+                // }
                 
-                // Resume all button
+                // // Resume all button
+                // ToolbarItem(placement: .automatic) {
+                //     Button(action: {
+                //         playPauseAllTorrents(start: true, info: makeConfig(store: store), onResponse: { response in
+                //             updateList(store: store, update: {_ in})
+                //         })
+                //     }) {
+                //         Label("Resume All", systemImage: "play")
+                //     }
+                //     .help("Resume all paused torrents")
+                // }
+                
+                // Add spacer between sort and inspector buttons
                 ToolbarItem(placement: .automatic) {
-                    Button(action: {
-                        playPauseAllTorrents(start: true, info: makeConfig(store: store), onResponse: { response in
-                            updateList(store: store, update: {_ in})
-                        })
-                    }) {
-                        Label("Resume All", systemImage: "play")
-                    }
-                    .help("Resume all paused torrents")
+                    Spacer()
                 }
                 
                 // Toggle inspector button
@@ -211,7 +249,7 @@ struct macOSContentView: View {
                 .frame(width: 400, height: 400)
         }
         .sheet(isPresented: $store.showSettings) {
-            SettingsView()
+            SettingsView(store: store)
                 .frame(width: 400)
                 .fixedSize()
         }
@@ -231,10 +269,15 @@ struct macOSContentView: View {
                 }
             }
             
+            // Refresh the navigation title and subtitle
+            titleRefreshTrigger.toggle()
+            
             print("\(newValue.rawValue) selected")
         }
         .onReceive(store.$torrents) { _ in
             updateAppBadge()
+            // Refresh the navigation title and subtitle
+            titleRefreshTrigger.toggle()
         }
         .onAppear {
             setupHost(hosts: hosts, store: store)
@@ -248,6 +291,26 @@ struct macOSContentView: View {
         }
         .onChange(of: sortBySelection) { oldValue, newValue in
             UserDefaults.standard.sortBySelection = newValue
+        }
+        .onChange(of: searchText) { oldValue, newValue in
+            // Only clear selection if the selected torrent isn't in the new filtered list
+            if let selectedTorrent = torrentSelection.wrappedValue {
+                // Check if the selected torrent matches the search filter
+                let isSelectedTorrentInSearchResults = searchText.isEmpty || 
+                    selectedTorrent.name.localizedCaseInsensitiveContains(searchText)
+                
+                // Check if the selected torrent matches the category filter
+                let filteredTorrents = store.torrents.filtered(by: filterBySelection)
+                let isSelectedTorrentInFilteredList = filteredTorrents.contains { $0.id == selectedTorrent.id }
+                
+                if !isSelectedTorrentInSearchResults || !isSelectedTorrentInFilteredList {
+                    // Selected torrent is not in the new filtered list, clear selection
+                    torrentSelection.wrappedValue = nil
+                }
+            }
+            
+            // Refresh the navigation title and subtitle
+            titleRefreshTrigger.toggle()
         }
     }
     

@@ -40,6 +40,7 @@ public struct Torrent: Codable, Hashable, Identifiable {
     let isFinished: Bool
     let isStalled: Bool
     let leftUntilDone: Int64
+    let magnetLink: String
     let metadataPercentComplete: Double
     let name: String
     let peersConnected: Int
@@ -53,13 +54,16 @@ public struct Torrent: Codable, Hashable, Identifiable {
     let totalSize: Int64
     var downloadedCalc: Int64 { haveUnchecked + haveValid}
     var statusCalc: TorrentStatusCalc {
-        if percentDone == 1 {
+        if status == TorrentStatus.stopped.rawValue && percentDone == 1 {
             return TorrentStatusCalc.complete
         }
         else if status == TorrentStatus.stopped.rawValue {
             return TorrentStatusCalc.paused
         }
-        else if status == TorrentStatus.queuedToVerify.rawValue || status == TorrentStatus.queuedToDownload.rawValue || status == TorrentStatus.queuedToSeed.rawValue {
+        else if status == TorrentStatus.queuedToVerify.rawValue
+            || status == TorrentStatus.queuedToDownload.rawValue
+            || status == TorrentStatus.queuedToSeed.rawValue {
+            
             return TorrentStatusCalc.queued
         }
         else if status == TorrentStatus.verifying.rawValue {

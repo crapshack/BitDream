@@ -61,7 +61,7 @@ public func getTorrents(config: TransmissionConfig, auth: TransmissionAuth, onRe
     let requestBody = TransmissionListRequest(
         method: "torrent-get",
         arguments: [
-            "fields": ["activityDate", "addedDate", "desiredAvailable", "eta", "haveUnchecked", "haveValid", "id", "isFinished", "isStalled", "leftUntilDone", "metadataPercentComplete", "name", "peersConnected", "peersGettingFromUs", "peersSendingToUs", "percentDone", "rateDownload", "rateUpload", "sizeWhenDone", "totalSize", "status" ]
+            "fields": ["activityDate", "addedDate", "desiredAvailable", "eta", "haveUnchecked", "haveValid", "id", "isFinished", "isStalled", "leftUntilDone", "magnetLink", "metadataPercentComplete", "name", "peersConnected", "peersGettingFromUs", "peersSendingToUs", "percentDone", "rateDownload", "rateUpload", "sizeWhenDone", "totalSize", "status" ]
         ]
     )
     

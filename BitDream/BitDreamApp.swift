@@ -20,7 +20,7 @@ struct BitDreamApp: App {
         UserDefaults.standard.register(defaults: [
             "sidebarVisibility": true, // true = show sidebar (.all), false = hide sidebar (.detailOnly)
             "inspectorVisibility": true,
-            "sortBySelection": "name" // Default sort by name
+            "sortBySelection": "nameAsc" // Default sort by name ascending
         ])
         
         // Request permission to use badges on macOS
