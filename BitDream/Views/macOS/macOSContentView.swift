@@ -22,8 +22,9 @@ struct macOSContentView: View {
         createTorrentSelectionBinding(selectedId: $selectedTorrentId, in: store)
     }
     
-    @State var sortBySelection: sortBy = UserDefaults.standard.sortBySelection
-    @State var filterBySelection: [TorrentStatusCalc] = TorrentStatusCalc.allCases
+    @State var sortProperty: SortProperty = .name
+    @State var sortOrder: SortOrder = .ascending
+    @State private var filterBySelection: [TorrentStatusCalc] = TorrentStatusCalc.allCases
     @State private var sidebarSelection: SidebarSelection = .allDreams
     @State private var isInspectorVisible: Bool = UserDefaults.standard.inspectorVisibility
     @State private var columnVisibility: NavigationSplitViewVisibility = UserDefaults.standard.sidebarVisibility
@@ -145,7 +146,7 @@ struct macOSContentView: View {
                                 .filter { torrent in
                                     torrentMatchesSearch(torrent, query: searchText)
                                 }
-                            let sortedTorrents = filteredTorrents.sorted(by: sortBySelection)
+                            let sortedTorrents = sortTorrents(filteredTorrents, by: sortProperty, order: sortOrder)
                             
                             ForEach(sortedTorrents, id: \.id) { torrent in
                                 NavigationLink(value: torrent) {
@@ -170,34 +171,39 @@ struct macOSContentView: View {
             .toolbar {              
                 // Content toolbar items
                 ToolbarItem(placement: .automatic) {
-                    Picker("", selection: $sortBySelection) {
-                        Group {
-                            Text("Name ↑").tag(sortBy.nameAsc)
-                            Text("Name ↓").tag(sortBy.nameDesc)
+                    Menu {
+                        // Sort properties
+                        ForEach(SortProperty.allCases, id: \.self) { property in
+                            let isSelected = Binding<Bool>(
+                                get: { sortProperty == property },
+                                set: { if $0 { sortProperty = property } }
+                            )
+                            Toggle(isOn: isSelected) {
+                                Text(property.rawValue)
+                            }
                         }
                         
                         Divider()
                         
-                        Group {
-                            Text("Date Added ↑").tag(sortBy.dateAddedAsc)
-                            Text("Date Added ↓").tag(sortBy.dateAddedDesc)
+                        // Sort order
+                        let isAscending = Binding<Bool>(
+                            get: { sortOrder == .ascending },
+                            set: { if $0 { sortOrder = .ascending } }
+                        )
+                        Toggle(isOn: isAscending) {
+                            Text("Ascending")
                         }
                         
-                        Divider()
-                        
-                        Group {
-                            Text("Status ↑").tag(sortBy.statusAsc)
-                            Text("Status ↓").tag(sortBy.statusDesc)
+                        let isDescending = Binding<Bool>(
+                            get: { sortOrder == .descending },
+                            set: { if $0 { sortOrder = .descending } }
+                        )
+                        Toggle(isOn: isDescending) {
+                            Text("Descending")
                         }
-                        
-                        Divider()
-                        
-                        Group {
-                            Text("Remaining Time ↑").tag(sortBy.etaAsc)
-                            Text("Remaining Time ↓").tag(sortBy.etaDesc)
-                        }
+                    } label: {
+                        Label("Sort", systemImage: "arrow.up.arrow.down.circle")
                     }
-                    .help("Sort by")
                 }
 
                 // Add torrent button
@@ -311,7 +317,7 @@ struct macOSContentView: View {
         .onChange(of: isInspectorVisible) { oldValue, newValue in
             UserDefaults.standard.inspectorVisibility = newValue
         }
-        .onChange(of: sortBySelection) { oldValue, newValue in
+        .onChange(of: sortProperty) { oldValue, newValue in
             UserDefaults.standard.sortBySelection = newValue
         }
         .onChange(of: searchText) { oldValue, newValue in

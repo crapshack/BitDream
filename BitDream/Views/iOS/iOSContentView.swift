@@ -26,7 +26,8 @@ struct iOSContentView: View {
         createTorrentSelectionBinding(selectedId: $selectedTorrentId, in: store)
     }
     
-    @State var sortBySelection: sortBy = UserDefaults.standard.sortBySelection
+    @State var sortProperty: SortProperty = .name
+    @State var sortOrder: SortOrder = .ascending
     @State var filterBySelection: [TorrentStatusCalc] = TorrentStatusCalc.allCases
     
     var body: some View {
@@ -50,9 +51,6 @@ struct iOSContentView: View {
             }
             .onAppear {
                 setupHost(hosts: hosts, store: store)
-            }
-            .onChange(of: sortBySelection) { oldValue, newValue in
-                UserDefaults.standard.sortBySelection = newValue
             }
         } detail: {
             if let selectedTorrent = torrentSelection.wrappedValue {
@@ -89,9 +87,9 @@ struct iOSContentView: View {
                     .foregroundColor(.gray)
                     .padding()
             } else {
-                ForEach(store.torrents
-                        .filtered(by: filterBySelection)
-                        .sorted(by: sortBySelection), id: \.id) { torrent in
+                let filteredTorrents = store.torrents.filtered(by: filterBySelection)
+                let sortedTorrents = sortTorrents(filteredTorrents, by: sortProperty, order: sortOrder)
+                ForEach(sortedTorrents, id: \.id) { torrent in
                     NavigationLink {
                         TorrentDetail(store: store, viewContext: viewContext, torrent: binding(for: torrent, in: store))
                     } label: {
@@ -163,15 +161,49 @@ struct iOSContentView: View {
                 }.environment(\.menuOrder, .fixed)
                 
                 Menu {
-                    Picker("Sort By", selection: $sortBySelection) {
-                        ForEach(sortBy.allCases, id: \.self) { item in
-                            Text(item.rawValue)
+                    // Sort properties
+                    ForEach(SortProperty.allCases, id: \.self) { property in
+                        Button {
+                            sortProperty = property
+                        } label: {
+                            HStack {
+                                Text(property.rawValue)
+                                Spacer()
+                                if sortProperty == property {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
                         }
                     }
-                    .pickerStyle(.automatic)
+                    
+                    Divider()
+                    
+                    // Sort order
+                    Button {
+                        sortOrder = .ascending
+                    } label: {
+                        HStack {
+                            Text("Ascending")
+                            Spacer()
+                            if sortOrder == .ascending {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                    
+                    Button {
+                        sortOrder = .descending
+                    } label: {
+                        HStack {
+                            Text("Descending")
+                            Spacer()
+                            if sortOrder == .descending {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
                 } label: {
-                    Text("Sort By")
-                    Image(systemName: "arrow.up.arrow.down")
+                    Label("Sort", systemImage: "arrow.up.arrow.down")
                 }.environment(\.menuOrder, .fixed)
                 
                 Divider()
