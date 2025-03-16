@@ -5,9 +5,15 @@ import CoreData
 
 #if os(macOS)
 struct macOSContentView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.openSettings) private var openSettings
+    @State private var showingThemeSettings = false
     let viewContext: NSManagedObjectContext
     let hosts: FetchedResults<Host>
     @ObservedObject var store: Store
+    
+    // Add ThemeManager to access accent color
+    @ObservedObject private var themeManager = ThemeManager.shared
     
     @State private var selectedTorrentId: Int? = nil
     
@@ -24,11 +30,26 @@ struct macOSContentView: View {
     @State private var searchText: String = ""
     @State private var titleRefreshTrigger: Bool = false
     
+    // Helper function to check if a torrent matches the search query
+    private func torrentMatchesSearch(_ torrent: Torrent, query: String) -> Bool {
+        if query.isEmpty {
+            return true
+        }
+        // Search in name
+        if torrent.name.localizedCaseInsensitiveContains(query) {
+            return true
+        }
+        // Search in labels
+        return torrent.labels.contains { label in
+            label.localizedCaseInsensitiveContains(query)
+        }
+    }
+    
     // Computed property to get counts for each category
     private func torrentCount(for category: SidebarSelection) -> Int {
         let filteredByCategory = store.torrents.filtered(by: category.filter)
-        let filteredBySearch = filteredByCategory.filter { 
-            searchText.isEmpty ? true : $0.name.localizedCaseInsensitiveContains(searchText) 
+        let filteredBySearch = filteredByCategory.filter { torrent in
+            torrentMatchesSearch(torrent, query: searchText)
         }
         return filteredBySearch.count
     }
@@ -97,7 +118,7 @@ struct macOSContentView: View {
                     .buttonStyle(.plain)
                     
                     Button {
-                        store.showSettings.toggle()
+                        openSettings()
                     } label: {
                         Label("Settings", systemImage: "gear")
                     }
@@ -105,6 +126,7 @@ struct macOSContentView: View {
                 }
             }
             .listStyle(SidebarListStyle())
+            .tint(themeManager.accentColor) // Apply accent color to sidebar selection
         } detail: {
             // Content (middle pane)
             VStack(spacing: 0) {
@@ -120,7 +142,9 @@ struct macOSContentView: View {
                         } else {
                             // Break up the complex expression into steps
                             let filteredTorrents = store.torrents.filtered(by: filterBySelection)
-                                .filter { searchText.isEmpty ? true : $0.name.localizedCaseInsensitiveContains(searchText) }
+                                .filter { torrent in
+                                    torrentMatchesSearch(torrent, query: searchText)
+                                }
                             let sortedTorrents = filteredTorrents.sorted(by: sortBySelection)
                             
                             ForEach(sortedTorrents, id: \.id) { torrent in
@@ -137,6 +161,7 @@ struct macOSContentView: View {
                         TorrentDetail(store: store, viewContext: viewContext, torrent: binding(for: torrent, in: store))
                     }
                     .listStyle(PlainListStyle())
+                    .tint(themeManager.accentColor) // Apply accent color to list selection
                 }
             }
             .navigationTitle(titleRefreshTrigger ? sidebarSelection.rawValue : sidebarSelection.rawValue)
@@ -248,11 +273,8 @@ struct macOSContentView: View {
             ErrorDialog(store: store)
                 .frame(width: 400, height: 400)
         }
-        .sheet(isPresented: $store.showSettings) {
-            SettingsView(store: store)
-                .frame(width: 400)
-                .fixedSize()
-        }
+        .tint(themeManager.accentColor) // Apply tint to NavigationSplitView
+        .accentColor(themeManager.accentColor) // Apply accent color to the entire view
         .onChange(of: sidebarSelection) { oldValue, newValue in
             // Update the filter
             filterBySelection = newValue.filter
@@ -296,14 +318,13 @@ struct macOSContentView: View {
             // Only clear selection if the selected torrent isn't in the new filtered list
             if let selectedTorrent = torrentSelection.wrappedValue {
                 // Check if the selected torrent matches the search filter
-                let isSelectedTorrentInSearchResults = searchText.isEmpty || 
-                    selectedTorrent.name.localizedCaseInsensitiveContains(searchText)
+                let matchesSearch = torrentMatchesSearch(selectedTorrent, query: searchText)
                 
                 // Check if the selected torrent matches the category filter
                 let filteredTorrents = store.torrents.filtered(by: filterBySelection)
                 let isSelectedTorrentInFilteredList = filteredTorrents.contains { $0.id == selectedTorrent.id }
                 
-                if !isSelectedTorrentInSearchResults || !isSelectedTorrentInFilteredList {
+                if !matchesSearch || !isSelectedTorrentInFilteredList {
                     // Selected torrent is not in the new filtered list, clear selection
                     torrentSelection.wrappedValue = nil
                 }

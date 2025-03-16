@@ -7,32 +7,120 @@ struct macOSSettingsView: View {
     @State private var showingThemeSettings = false
     @ObservedObject var store: Store
     
+    // Use ThemeManager instead of direct AppStorage
+    @ObservedObject private var themeManager = ThemeManager.shared
+    
     var body: some View {
-        // macOS version with custom styling to match the screenshot
-        VStack(spacing: 0) {
-            // Header
-            Text("Settings")
-                .font(.headline)
-                .frame(maxWidth: .infinity, alignment: .center)
-                .padding()
-            .background(Color(NSColor.windowBackgroundColor))
-            
-            // Content
-            VStack(alignment: .leading, spacing: 16) {
+        // macOS version adapted for the Settings scene
+        TabView {
+            // General Tab
+            VStack(alignment: .leading, spacing: 20) {
                 // Appearance section
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Appearance")
-                        .font(.headline)
-                    
-                    HStack(spacing: 8) {
-                        Button("Theme Settings") {
-                            // Disabled for now
+                GroupBox(label: Text("Appearance").font(.headline)) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        // Theme selection (disabled for now)
+                        HStack {
+                            Text("Theme")
+                            Spacer()
+                            Picker("", selection: .constant("System")) {
+                                Text("System").tag("System")
+                                Text("Light").tag("Light")
+                                Text("Dark").tag("Dark")
+                            }
+                            .pickerStyle(.menu)
+                            .frame(width: 120)
+                            .disabled(true)
                         }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
-                        .disabled(true)
+                        .padding(.top, 4)
                         
-                        Text("Coming Soon")
+                        // Accent color
+                        HStack {
+                            Text("Accent Color")
+                            Spacer()
+                            Picker("", selection: $themeManager.currentAccentColorOption) {
+                                ForEach(AccentColorOption.allCases) { option in
+                                    HStack {
+                                        Circle()
+                                            .fill(option.color)
+                                            .frame(width: 12, height: 12)
+                                        Text(option.name)
+                                    }
+                                    .tag(option)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .frame(width: 120)
+                        }
+                        
+                        // Color preview
+                        HStack(spacing: 12) {
+                            ForEach(AccentColorOption.allCases) { option in
+                                VStack {
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(option.color)
+                                        .frame(width: 40, height: 40)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .stroke(themeManager.currentAccentColorOption == option ? Color.primary : Color.clear, lineWidth: 2)
+                                        )
+                                    Text(option.rawValue)
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                }
+                                .onTapGesture {
+                                    themeManager.setAccentColor(option)
+                                }
+                            }
+                        }
+                        .padding(.top, 8)
+                    }
+                    .padding(10)
+                }
+                
+                Spacer()
+            }
+            .padding(20)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .tabItem {
+                Label("General", systemImage: "gear")
+            }
+            
+            // Advanced Tab
+            VStack(alignment: .leading, spacing: 20) {
+                // Refresh Settings section
+                GroupBox(label: Text("Refresh Settings").font(.headline)) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Text("Auto-refresh interval:")
+                            Spacer()
+                            Picker("", selection: $store.pollInterval) {
+                                ForEach(SettingsView.pollIntervalOptions, id: \.self) { interval in
+                                    Text(SettingsView.formatInterval(interval)).tag(interval)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .frame(width: 120)
+                        }
+                        .padding(.top, 4)
+                        
+                        Text("Current interval: \(SettingsView.formatInterval(store.pollInterval))")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(10)
+                }
+                
+                // Notifications section
+                GroupBox(label: Text("Notifications").font(.headline)) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Toggle("Show app badge for completed dreams", isOn: .constant(true))
+                            .disabled(true)
+                            .padding(.top, 4)
+                        
+                        Toggle("Show notifications for completed dreams", isOn: .constant(true))
+                            .disabled(true)
+                            
+                        Text("Advanced settings coming soon")
                             .font(.caption2)
                             .foregroundColor(.orange)
                             .padding(.horizontal, 6)
@@ -40,60 +128,31 @@ struct macOSSettingsView: View {
                             .background(Color.orange.opacity(0.2))
                             .cornerRadius(4)
                     }
+                    .padding(10)
                 }
                 
-                Divider()
-                
-                // Refresh Settings section
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Refresh Settings")
-                        .font(.headline)
-                    
-                    HStack {
-                        Text("Poll Interval")
-                        Spacer()
-                        Picker("", selection: Binding(
-                            get: { self.store.pollInterval },
-                            set: { self.store.updatePollInterval($0) }
-                        )) {
-                            ForEach(SettingsView.pollIntervalOptions, id: \.self) { interval in
-                                Text(SettingsView.formatInterval(interval)).tag(interval)
-                            }
+                // Reset section
+                GroupBox(label: Text("Reset").font(.headline)) {
+                    VStack {
+                        Button("Reset All Settings") {
+                            // Reset accent color to default
+                            themeManager.setAccentColor(.blue)
                         }
-                        .frame(width: 120)
-                        .pickerStyle(.menu)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, 4)
                     }
-                }
-                
-                Divider()
-                
-                // About section
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("About")
-                        .font(.headline)
-                    
-                    HStack {
-                        Text("Version")
-                        Spacer()
-                        Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")
-                            .foregroundColor(.secondary)
-                    }
+                    .padding(10)
                 }
                 
                 Spacer()
-                
-                // Done button
-                Button("Done") {
-                    dismiss()
-                }
-                .buttonStyle(.bordered)
-                .frame(maxWidth: .infinity, alignment: .center)
-                .padding(.top, 8)
             }
-            .padding()
-            .frame(width: 400)
+            .padding(20)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .tabItem {
+                Label("Advanced", systemImage: "gearshape.2")
+            }
         }
-        .cornerRadius(8)
+        .accentColor(themeManager.accentColor) // Apply the accent color to the TabView
     }
 }
 

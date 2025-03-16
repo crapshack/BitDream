@@ -28,7 +28,7 @@ struct ServerDetail: View {
             host: host,
             isAddNew: isAddNew
         )
-        #else
+        #elseif os(macOS)
         macOSServerDetail(
             store: store,
             viewContext: viewContext,

@@ -36,6 +36,10 @@ class Store: NSObject, ObservableObject {
     
     var timer: Timer = Timer()
     
+    override init() {
+        super.init()
+    }
+    
     public func setHost(host: Host) {
         var config = TransmissionConfig()
         config.host = host.server

@@ -47,6 +47,7 @@ struct iOSTorrentDetail: View {
                             Text(details.addedDate)
                                 .foregroundColor(.gray)
                         }
+                        
                         NavigationLink(destination: TorrentFileDetail(files: files)) {
                             HStack {
                                 Text("Files")
