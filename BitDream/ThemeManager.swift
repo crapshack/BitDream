@@ -1,153 +1,102 @@
 import SwiftUI
+import Foundation
 
-// Define app themes
-struct AppTheme: Identifiable, Equatable {
-    var id = UUID()
-    var name: String
-    var primaryColor: Color
-    var secondaryColor: Color
-    var accentColor: Color
-    var backgroundColor: Color
-    var textColor: Color
+// Define the available accent colors
+enum AccentColorOption: String, CaseIterable, Identifiable {
+    case blue = "#0671b7"
+    case pink = "#f8b7cd"
+    case lightBlue = "#67a3d9"
+    case lightPink = "#fdd0e0"
+    case paleBlue = "#c8e7f5"
     
-    // Predefined themes
-    static let standard = AppTheme(
-        name: "Standard",
-        primaryColor: .blue,
-        secondaryColor: .green,
-        accentColor: .orange,
-        backgroundColor: Color.primary.opacity(0.05),
-        textColor: Color.primary
-    )
+    var id: String { self.rawValue }
     
-    static let midnight = AppTheme(
-        name: "Midnight Dream",
-        primaryColor: .purple,
-        secondaryColor: .blue,
-        accentColor: .pink,
-        backgroundColor: Color.black,
-        textColor: .white
-    )
+    var name: String {
+        switch self {
+        case .blue: return "Blue"
+        case .pink: return "Pink"
+        case .lightBlue: return "Light Blue"
+        case .lightPink: return "Light Pink"
+        case .paleBlue: return "Pale Blue"
+        }
+    }
     
-    static let sunset = AppTheme(
-        name: "Sunset",
-        primaryColor: .orange,
-        secondaryColor: .yellow,
-        accentColor: .red,
-        backgroundColor: Color(red: 0.1, green: 0.1, blue: 0.2),
-        textColor: .white
-    )
+    var color: Color {
+        Color(hex: self.rawValue)
+    }
     
-    static let forest = AppTheme(
-        name: "Forest",
-        primaryColor: .green,
-        secondaryColor: Color(red: 0.2, green: 0.5, blue: 0.3),
-        accentColor: .yellow,
-        backgroundColor: Color(red: 0.1, green: 0.2, blue: 0.1),
-        textColor: .white
-    )
-    
-    static let ocean = AppTheme(
-        name: "Ocean",
-        primaryColor: .blue,
-        secondaryColor: .cyan,
-        accentColor: .teal,
-        backgroundColor: Color(red: 0.0, green: 0.1, blue: 0.2),
-        textColor: .white
-    )
-    
-    static let allThemes = [standard, midnight, sunset, forest, ocean]
+    static var defaultColor: AccentColorOption {
+        return .blue
+    }
 }
 
 // Theme manager class
 class ThemeManager: ObservableObject {
-    @Published var currentTheme: AppTheme
+    static let shared = ThemeManager()
     
-    // Key for storing theme preference
-    private let themeKey = "selectedTheme"
+    @Published var accentColor: Color
+    @Published var currentAccentColorOption: AccentColorOption
+    
+    // Key for storing accent color preference
+    private let accentColorKey = "accentColorKey"
     
     init() {
-        // Load saved theme or use standard
-        if let themeName = UserDefaults.standard.string(forKey: themeKey),
-           let savedTheme = AppTheme.allThemes.first(where: { $0.name == themeName }) {
-            self.currentTheme = savedTheme
+        // Load saved accent color from UserDefaults or use default
+        let savedHex = UserDefaults.standard.string(forKey: accentColorKey) ?? AccentColorOption.defaultColor.rawValue
+        
+        // Initialize with default values first
+        self.currentAccentColorOption = .blue
+        self.accentColor = Color(hex: AccentColorOption.defaultColor.rawValue)
+        
+        // Then update if we have a saved value
+        if let option = AccentColorOption.allCases.first(where: { $0.rawValue == savedHex }) {
+            self.currentAccentColorOption = option
+            self.accentColor = option.color
+        }
+    }
+    
+    func setAccentColor(_ option: AccentColorOption) {
+        self.currentAccentColorOption = option
+        self.accentColor = option.color
+        
+        // Save to UserDefaults
+        UserDefaults.standard.set(option.rawValue, forKey: accentColorKey)
+    }
+    
+    func setAccentColorFromHex(_ hex: String) {
+        if let option = AccentColorOption.allCases.first(where: { $0.rawValue == hex }) {
+            setAccentColor(option)
         } else {
-            self.currentTheme = AppTheme.standard
-        }
-    }
-    
-    func setTheme(_ theme: AppTheme) {
-        currentTheme = theme
-        UserDefaults.standard.set(theme.name, forKey: themeKey)
-    }
-}
-
-// Environment key for theme
-struct ThemeKey: EnvironmentKey {
-    static let defaultValue: AppTheme = AppTheme.standard
-}
-
-extension EnvironmentValues {
-    var theme: AppTheme {
-        get { self[ThemeKey.self] }
-        set { self[ThemeKey.self] = newValue }
-    }
-}
-
-// Theme picker view
-struct ThemePicker: View {
-    @ObservedObject var themeManager: ThemeManager
-    @Environment(\.dismiss) private var dismiss
-    
-    var body: some View {
-        NavigationView {
-            List {
-                ForEach(AppTheme.allThemes) { theme in
-                    Button(action: {
-                        themeManager.setTheme(theme)
-                    }) {
-                        HStack {
-                            Text(theme.name)
-                                .foregroundColor(theme.textColor)
-                            
-                            Spacer()
-                            
-                            if themeManager.currentTheme.name == theme.name {
-                                Image(systemName: "checkmark")
-                                    .foregroundColor(theme.accentColor)
-                            }
-                            
-                            // Theme color preview
-                            HStack(spacing: 4) {
-                                Circle()
-                                    .fill(theme.primaryColor)
-                                    .frame(width: 16, height: 16)
-                                Circle()
-                                    .fill(theme.secondaryColor)
-                                    .frame(width: 16, height: 16)
-                                Circle()
-                                    .fill(theme.accentColor)
-                                    .frame(width: 16, height: 16)
-                            }
-                        }
-                        .padding(.vertical, 8)
-                        .listRowBackground(theme.backgroundColor)
-                    }
-                }
-            }
-            .navigationTitle("Choose Theme")
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                }
-            }
+            // If hex doesn't match any predefined option, create a custom color
+            self.accentColor = Color(hex: hex)
+            UserDefaults.standard.set(hex, forKey: accentColorKey)
         }
     }
 }
 
-// Preview
-#Preview {
-    ThemePicker(themeManager: ThemeManager())
+// Extension to create Color from hex string
+extension Color {
+    init(hex: String) {
+        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+        var int: UInt64 = 0
+        Scanner(string: hex).scanHexInt64(&int)
+        let a, r, g, b: UInt64
+        switch hex.count {
+        case 3: // RGB (12-bit)
+            (a, r, g, b) = (255, (int >> 8) * 17, (int >> 4 & 0xF) * 17, (int & 0xF) * 17)
+        case 6: // RGB (24-bit)
+            (a, r, g, b) = (255, int >> 16, int >> 8 & 0xFF, int & 0xFF)
+        case 8: // ARGB (32-bit)
+            (a, r, g, b) = (int >> 24, int >> 16 & 0xFF, int >> 8 & 0xFF, int & 0xFF)
+        default:
+            (a, r, g, b) = (1, 1, 1, 0)
+        }
+        self.init(
+            .sRGB,
+            red: Double(r) / 255,
+            green: Double(g) / 255,
+            blue: Double(b) / 255,
+            opacity: Double(a) / 255
+        )
+    }
 } 

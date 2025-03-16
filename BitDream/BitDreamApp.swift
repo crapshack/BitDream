@@ -15,6 +15,9 @@ import Foundation
 struct BitDreamApp: App {
     let persistenceController = PersistenceController.shared
     
+    // Create a shared store instance that will be used by both the main app and settings
+    @StateObject private var store = Store()
+    
     init() {
         // Register default values for view state
         UserDefaults.standard.register(defaults: [
@@ -37,6 +40,17 @@ struct BitDreamApp: App {
         WindowGroup {
             ContentView()
                 .environment(\.managedObjectContext, persistenceController.container.viewContext)
+                .environmentObject(store) // Pass the shared store to the ContentView
+                .accentColor(ThemeManager.shared.accentColor) // Apply the accent color to the entire app
+                .environmentObject(ThemeManager.shared) // Pass the ThemeManager to all views
         }
+        
+        #if os(macOS)
+        Settings {
+            SettingsView(store: store) // Use the same store instance
+                .frame(minWidth: 500, idealWidth: 550, maxWidth: 650, minHeight: 300, idealHeight: 350, maxHeight: 450)
+                .environmentObject(ThemeManager.shared) // Pass the ThemeManager to the Settings view
+        }
+        #endif
     }
 }

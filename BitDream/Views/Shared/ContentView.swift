@@ -60,7 +60,8 @@ struct ContentView: View {
         sortDescriptors: [NSSortDescriptor(key: "name", ascending: true)]
     ) var hosts: FetchedResults<Host>
 
-    @ObservedObject var store: Store = Store()
+    // Use the store passed from the environment
+    @EnvironmentObject var store: Store
 
     var body: some View {
         #if os(iOS)

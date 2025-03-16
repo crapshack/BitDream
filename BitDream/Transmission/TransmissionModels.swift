@@ -39,6 +39,7 @@ public struct Torrent: Codable, Hashable, Identifiable {
     public let id: Int
     let isFinished: Bool
     let isStalled: Bool
+    let labels: [String]
     let leftUntilDone: Int64
     let magnetLink: String
     let metadataPercentComplete: Double

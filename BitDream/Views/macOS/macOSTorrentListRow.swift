@@ -21,23 +21,11 @@ struct macOSTorrentListRow: View {
         VStack {
             HStack {
                 Text(torrent.name)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .topLeading)
-                    .padding(.bottom, 1)
                     .lineLimit(1)
+                    .truncationMode(.tail)
                 
-                Button(action: {
-                    let info = makeConfig(store: store)
-                    playPauseTorrent(torrent: torrent, config: info.config, auth: info.auth, onResponse: { response in
-                        // TODO: Handle response
-                    })
-                }) {
-                    Image(systemName: torrent.status == TorrentStatus.stopped.rawValue ? "play.circle" : "pause.circle")
-                        .font(.system(size: 18))
-                        .foregroundColor(.secondary)
-                }
-                .buttonStyle(.plain)
-                .help(torrent.status == TorrentStatus.stopped.rawValue ? "Resume Dream" : "Pause Dream")
+                // Display labels inline if present
+                createLabelTagsView(for: torrent)
             }
             
             createStatusView(for: torrent)
@@ -160,6 +148,29 @@ struct macOSTorrentListRow: View {
         )
     }
 }
+
+// Shared function to create label tags view
+func createLabelTagsView(for torrent: Torrent) -> some View {
+    ScrollView(.horizontal, showsIndicators: false) {
+        HStack(spacing: 4) {
+            ForEach(torrent.labels, id: \.self) { label in
+                Text(label)
+                    .font(.caption)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 2)
+                    .background(
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(Color.accentColor.opacity(0.15))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 4)
+                            .stroke(Color.accentColor.opacity(0.4), lineWidth: 1)
+                    )
+            }
+        }
+    }
+}
+
 #else
 // Empty struct for iOS to reference - this won't be compiled on iOS but provides the type
 struct macOSTorrentListRow: View {
