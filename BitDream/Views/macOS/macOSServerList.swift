@@ -65,9 +65,15 @@ struct macOSServerList: View {
                                             .foregroundColor(.secondary)
                                             
                                         if let version = host.version {
-                                            Text("Version: \(version)")
+                                            Text("\(version)")
                                                 .font(.caption)
-                                                .foregroundColor(.secondary)
+                                                .foregroundColor(.purple)
+                                                .padding(.horizontal, 8)
+                                                .padding(.vertical, 2)
+                                                .background(
+                                                    Capsule()
+                                                        .fill(Color.purple.opacity(0.1))
+                                                )
                                         }
                                     }
                                     

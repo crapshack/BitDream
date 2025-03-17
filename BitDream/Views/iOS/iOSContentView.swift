@@ -59,7 +59,9 @@ struct iOSContentView: View {
                 actionToolbarItems
             }
             .onAppear {
-                setupHost(hosts: hosts, store: store)
+                if store.host == nil {
+                    setupHost(hosts: hosts, store: store)
+                }
             }
             .onChange(of: sortProperty) { oldValue, newValue in
                 UserDefaults.standard.sortProperty = newValue
@@ -105,15 +107,11 @@ struct iOSContentView: View {
                 let filteredTorrents = store.torrents.filtered(by: filterBySelection)
                 let sortedTorrents = sortTorrents(filteredTorrents, by: sortProperty, order: sortOrder)
                 ForEach(sortedTorrents, id: \.id) { torrent in
-                    NavigationLink {
-                        TorrentDetail(store: store, viewContext: viewContext, torrent: binding(for: torrent, in: store))
-                    } label: {
-                        TorrentListRow(
-                            torrent: binding(for: torrent, in: store),
-                            store: store,
-                            selectedTorrents: torrentSelection
-                        )
-                    }
+                    TorrentListRow(
+                        torrent: binding(for: torrent, in: store),
+                        store: store,
+                        selectedTorrents: torrentSelection
+                    )
                     .tag(torrent)
                     .id(torrent.id)
                     .listRowSeparator(.visible)
@@ -128,11 +126,17 @@ struct iOSContentView: View {
         ToolbarItem(placement: .automatic) {
             Menu {
                 Menu {
-                    ForEach(hosts, id: \.self) { host in
-                        Button(action: {
-                            store.setHost(host: host)
-                        }) {
-                            Label(host.name!, systemImage: host == store.host ? "checkmark" : "")
+                    Picker("Server", selection: .init(
+                        get: { store.host },
+                        set: { host in
+                            if let host = host {
+                                store.setHost(host: host)
+                            }
+                        }
+                    )) {
+                        ForEach(hosts, id: \.self) { host in
+                            Text(host.name!)
+                                .tag(host as Host?)
                         }
                     }
                 } label: {

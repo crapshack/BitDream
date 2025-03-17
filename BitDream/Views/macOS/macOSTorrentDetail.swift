@@ -63,10 +63,10 @@ struct macOSTorrentDetail: View {
                                 isShowingFilesSheet = true
                             } label: {
                                 HStack(spacing: 4) {
-                                    Text("\(files.count) Files")
+                                    Text("\(files.count)")
                                         .foregroundColor(.accentColor)
                                     
-                                    Image(systemName: "text.page.badge.magnifyingglass")
+                                    Image(systemName: "text.magnifyingglass")
                                         .font(.system(size: 11))
                                         .foregroundColor(.accentColor)
                                 }

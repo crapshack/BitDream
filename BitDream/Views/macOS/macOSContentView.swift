@@ -38,7 +38,6 @@ struct macOSContentView: View {
     @State private var isInspectorVisible: Bool = UserDefaults.standard.inspectorVisibility
     @State private var columnVisibility: NavigationSplitViewVisibility = UserDefaults.standard.sidebarVisibility
     @State private var searchText: String = ""
-    @State private var titleRefreshTrigger: Bool = false
     
     // Helper function to check if a torrent matches the search query
     private func torrentMatchesSearch(_ torrent: Torrent, query: String) -> Bool {
@@ -158,28 +157,22 @@ struct macOSContentView: View {
                             let sortedTorrents = sortTorrents(filteredTorrents, by: sortProperty, order: sortOrder)
                             
                             ForEach(sortedTorrents, id: \.id) { torrent in
-                                NavigationLink(value: torrent) {
-                                    TorrentListRow(
-                                        torrent: binding(for: torrent, in: store),
-                                        store: store,
-                                        selectedTorrents: torrentSelection
-                                    )
-                                }
+                                TorrentListRow(
+                                    torrent: binding(for: torrent, in: store),
+                                    store: store,
+                                    selectedTorrents: torrentSelection
+                                )
                                 .tag(torrent)
-                                .id(torrent.id)
                                 .listRowSeparator(.visible)
                             }
                         }
                     }
-                    .navigationDestination(for: Torrent.self) { torrent in
-                        TorrentDetail(store: store, viewContext: viewContext, torrent: binding(for: torrent, in: store))
-                    }
-                    .listStyle(PlainListStyle())
+                    .listStyle(.inset)
                     .tint(themeManager.accentColor) // Apply accent color to list selection
                 }
             }
-            .navigationTitle(titleRefreshTrigger ? sidebarSelection.rawValue : sidebarSelection.rawValue)
-            .navigationSubtitle(titleRefreshTrigger ? navigationSubtitle : navigationSubtitle)
+            .navigationTitle(sidebarSelection.rawValue)
+            .navigationSubtitle(navigationSubtitle)
             .searchable(text: $searchText, placement: .toolbar)
             .toolbar {              
                 // Content toolbar items
@@ -310,15 +303,10 @@ struct macOSContentView: View {
                 }
             }
             
-            // Refresh the navigation title and subtitle
-            titleRefreshTrigger.toggle()
-            
             print("\(newValue.rawValue) selected")
         }
         .onReceive(store.$torrents) { _ in
             updateAppBadge()
-            // Refresh the navigation title and subtitle
-            titleRefreshTrigger.toggle()
         }
         .onAppear {
             setupHost(hosts: hosts, store: store)
@@ -351,9 +339,6 @@ struct macOSContentView: View {
                     torrentSelection.wrappedValue.removeAll()
                 }
             }
-            
-            // Refresh the navigation title and subtitle
-            titleRefreshTrigger.toggle()
         }
     }
     

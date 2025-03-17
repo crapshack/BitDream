@@ -28,7 +28,7 @@ struct TorrentDetail: View {
 
 // Shared function to determine torrent status color
 func statusColor(for torrent: Torrent) -> Color {
-    if torrent.statusCalc == TorrentStatusCalc.complete {
+    if torrent.statusCalc == TorrentStatusCalc.complete || torrent.statusCalc == TorrentStatusCalc.seeding {
         return .green.opacity(0.75)
     }
     else if torrent.statusCalc == TorrentStatusCalc.paused {
