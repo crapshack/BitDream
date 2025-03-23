@@ -87,7 +87,7 @@ struct macOSTorrentListRow: View {
                     updateTorrent(
                         args: TorrentSetRequestArgs(
                             ids: Array(torrentsToAct.map { $0.id }),
-                            priorityHigh: []
+                            priority: .high
                         ),
                         info: info,
                         onComplete: { r in }
@@ -103,7 +103,7 @@ struct macOSTorrentListRow: View {
                     updateTorrent(
                         args: TorrentSetRequestArgs(
                             ids: Array(torrentsToAct.map { $0.id }),
-                            priorityNormal: []
+                            priority: .normal
                         ),
                         info: info,
                         onComplete: { r in }
@@ -119,7 +119,7 @@ struct macOSTorrentListRow: View {
                     updateTorrent(
                         args: TorrentSetRequestArgs(
                             ids: Array(torrentsToAct.map { $0.id }),
-                            priorityLow: []
+                            priority: .low
                         ),
                         info: info,
                         onComplete: { r in }
