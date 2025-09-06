@@ -41,6 +41,12 @@ struct macOSContentView: View {
     @State private var includedLabels: Set<String> = []
     @State private var excludedLabels: Set<String> = []
     
+    // Helper function to extract label query from "label:something" syntax
+    private func extractLabelQuery(from query: String) -> String {
+        let colonIndex = query.firstIndex(of: ":")
+        return colonIndex != nil ? String(query[query.index(after: colonIndex!)...]) : ""
+    }
+    
     // Helper function to check if a torrent matches the search query and label filters
     private func torrentMatchesSearch(_ torrent: Torrent, query: String) -> Bool {
         // Check label filters first
@@ -73,8 +79,7 @@ struct macOSContentView: View {
         
         // Check for label-specific search syntax: "label:tv"
         if query.lowercased().hasPrefix("label:") {
-            let colonIndex = query.firstIndex(of: ":")
-            let labelQuery = colonIndex != nil ? String(query[query.index(after: colonIndex!)...]) : ""
+            let labelQuery = extractLabelQuery(from: query)
             if labelQuery.isEmpty {
                 // Show all torrents with any labels
                 return !torrent.labels.isEmpty
@@ -430,8 +435,7 @@ struct macOSContentView: View {
         .onChange(of: searchText) { oldValue, newValue in
             // Check if user typed label: syntax and auto-select matching labels
             if newValue.lowercased().hasPrefix("label:") {
-                let colonIndex = newValue.firstIndex(of: ":")
-                let labelQuery = colonIndex != nil ? String(newValue[newValue.index(after: colonIndex!)...]) : ""
+                let labelQuery = extractLabelQuery(from: newValue)
                 
                 // Clear any previous auto-selections that don't match exactly anymore
                 let currentExactMatches = Set(store.availableLabels.filter { label in
