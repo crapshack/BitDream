@@ -298,7 +298,6 @@ struct macOSContentView: View {
             ErrorDialog(store: store)
                 .frame(width: 400, height: 400)
         }
-        .tint(themeManager.accentColor) // Apply tint to NavigationSplitView
         .accentColor(themeManager.accentColor) // Apply accent color to the entire view
         .onChange(of: sidebarSelection) { oldValue, newValue in
             // Update the filter

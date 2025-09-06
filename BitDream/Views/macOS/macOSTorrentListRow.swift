@@ -59,6 +59,7 @@ struct macOSTorrentListRow: View {
             }) {
                 HStack {
                     Image(systemName: torrent.status == TorrentStatus.stopped.rawValue ? "play" : "pause")
+                        .foregroundStyle(.secondary)
                     Text(torrent.status == TorrentStatus.stopped.rawValue ? "Resume" : "Pause")
                 }
             }
@@ -73,6 +74,7 @@ struct macOSTorrentListRow: View {
                 }) {
                     HStack {
                         Image(systemName: "play.fill")
+                            .foregroundStyle(.secondary)
                         Text("Resume Now")
                     }
                 }
@@ -95,6 +97,7 @@ struct macOSTorrentListRow: View {
                 }) {
                     HStack {
                         Image(systemName: "arrow.up")
+                            .foregroundStyle(.secondary)
                         Text("High")
                     }
                 }
@@ -111,6 +114,7 @@ struct macOSTorrentListRow: View {
                 }) {
                     HStack {
                         Image(systemName: "minus")
+                            .foregroundStyle(.secondary)
                         Text("Normal")
                     }
                 }
@@ -127,12 +131,14 @@ struct macOSTorrentListRow: View {
                 }) {
                     HStack {
                         Image(systemName: "arrow.down")
+                            .foregroundStyle(.secondary)
                         Text("Low")
                     }
                 }
             } label: {
                 HStack {
                     Image(systemName: "flag.badge.ellipsis")
+                        .foregroundStyle(.secondary)
                     Text("Update Priority")
                 }
             }
@@ -143,6 +149,7 @@ struct macOSTorrentListRow: View {
             }) {
                 HStack {
                     Image(systemName: "tag")
+                        .foregroundStyle(.secondary)
                     Text("Edit Labels")
                 }
             }
@@ -156,6 +163,7 @@ struct macOSTorrentListRow: View {
                 }) {
                     HStack {
                         Image(systemName: "document.on.document.fill")
+                            .foregroundStyle(.secondary)
                         Text("Copy Magnet Link")
                     }
                 }
@@ -171,6 +179,7 @@ struct macOSTorrentListRow: View {
                 }) {
                     HStack {
                         Image(systemName: "arrow.left.arrow.right")
+                            .foregroundStyle(.secondary)
                         Text("Ask For More Peers")
                     }
                 }
@@ -186,6 +195,7 @@ struct macOSTorrentListRow: View {
                 }) {
                     HStack {
                         Image(systemName: "checkmark.arrow.trianglehead.counterclockwise")
+                            .foregroundStyle(.secondary)
                         Text("Verify Local Data")
                     }
                 }
@@ -199,10 +209,12 @@ struct macOSTorrentListRow: View {
             }) {
                 HStack {
                     Image(systemName: "trash")
+                        .foregroundStyle(.secondary)
                     Text("Delete")
                 }
             }
         }
+        .tint(.primary)
         .id(torrent.id)
         .sheet(isPresented: $labelDialog) {
             VStack(spacing: 16) {

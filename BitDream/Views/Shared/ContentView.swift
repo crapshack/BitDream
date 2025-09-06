@@ -149,6 +149,7 @@ struct StatsHeaderView: View {
             }
             .font(.subheadline)
             .padding([.leading, .trailing])
+            .padding(.vertical, 4)
             Divider()
         }
     }
