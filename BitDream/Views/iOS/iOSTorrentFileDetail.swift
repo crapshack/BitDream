@@ -24,6 +24,7 @@ func sortFiles(_ files: [TorrentFileRow], by property: FileSortProperty, order: 
     case .size:
         return order == .ascending ? 
             files.sorted { $0.size < $1.size } :
+            files.sorted { $0.size > $1.size }
     case .progress:
         return order == .ascending ?
             files.sorted { $0.percentDone < $1.percentDone } :
@@ -433,7 +434,7 @@ struct BulkActionToolbar: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
-            .background(Color(UIColor.systemBackground))
+            .background(.background)
         }
     }
     
@@ -595,7 +596,7 @@ struct FileActionButtonsView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
-        .background(Color(UIColor.systemGroupedBackground))
+        .background(.background)
     }
 }
 

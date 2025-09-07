@@ -323,11 +323,11 @@ struct HeaderView: View {
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(.secondary)
                 TextField("Search files...", text: $viewModel.searchText)
-                    .textFieldStyle(.plain)
+                    .textFieldStyle(.roundedBorder)
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 6)
-            .background(Color(NSColor.controlBackgroundColor))
+            .background(.background)
             .cornerRadius(6)
             .frame(maxWidth: 300)
             
