@@ -197,6 +197,19 @@ public struct TorrentFilesRequestArgs: Codable {
     }
 }
 
+/// Request arguments for torrent-rename-path
+public struct TorrentRenameRequestArgs: Codable {
+    public var ids: [Int]
+    public var path: String
+    public var name: String
+    
+    public init(ids: [Int], path: String, name: String) {
+        self.ids = ids
+        self.path = path
+        self.name = name
+    }
+}
+
 /// The remove body has delete-local-data argument with hyphens
 public struct TransmissionRemoveRequestArgs: Codable {
     public var ids: [Int]
@@ -328,4 +341,11 @@ public struct TransmissionSessionResponseArguments: Codable, Hashable {
         case downloadDir = "download-dir"
         case version
     }
+}
+
+/// Response for torrent-rename-path
+public struct TorrentRenameResponseArgs: Codable {
+    public let path: String
+    public let name: String
+    public let id: Int
 }

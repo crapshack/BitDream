@@ -218,7 +218,7 @@ struct macOSContentView: View {
                         
                         if isCompactMode {
                             // Compact table view
-                            macOSTorrentListCompactView(
+                            macOSTorrentListCompact(
                                 torrents: sortedTorrents,
                                 selection: $selectedTorrentIds,
                                 store: store
@@ -227,7 +227,7 @@ struct macOSContentView: View {
                             // Expanded list view
                             List(selection: torrentSelection) {
                                 ForEach(sortedTorrents, id: \.id) { torrent in
-                                    macOSTorrentListExpandedView(
+                                    macOSTorrentListExpanded(
                                         torrent: binding(for: torrent, in: store),
                                         store: store,
                                         selectedTorrents: torrentSelection

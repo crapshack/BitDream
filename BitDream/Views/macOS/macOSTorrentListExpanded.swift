@@ -3,7 +3,7 @@ import SwiftUI
 import KeychainAccess
 
 #if os(macOS)
-struct macOSTorrentListExpandedView: View {
+struct macOSTorrentListExpanded: View {
     @Binding var torrent: Torrent
     var store: Store
     @Binding var selectedTorrents: Set<Torrent>
@@ -12,6 +12,9 @@ struct macOSTorrentListExpandedView: View {
     @State var labelDialog: Bool = false
     @State var labelInput: String = ""
     @State private var shouldSave: Bool = false
+    @State private var renameDialog: Bool = false
+    @State private var renameInput: String = ""
+    @State private var renameTargetId: Int? = nil
     @State private var showingError = false
     @State private var errorMessage = ""
     @Environment(\.colorScheme) var colorScheme
@@ -56,14 +59,17 @@ struct macOSTorrentListExpandedView: View {
             labelInput: $labelInput,
             shouldSave: $shouldSave,
             showingError: $showingError,
-            errorMessage: $errorMessage
+            errorMessage: $errorMessage,
+            renameDialog: $renameDialog,
+            renameInput: $renameInput,
+            renameTargetId: $renameTargetId
         ))
     }
 }
 
 #else
 // Empty struct for iOS to reference
-struct macOSTorrentListExpandedView: View {
+struct macOSTorrentListExpanded: View {
     @Binding var torrent: Torrent
     var store: Store
     @Binding var selectedTorrents: Set<Torrent>

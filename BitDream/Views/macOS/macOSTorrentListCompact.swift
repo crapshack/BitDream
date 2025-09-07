@@ -4,10 +4,10 @@ import KeychainAccess
 
 #if os(macOS)
 
-// MARK: - Table Row Data Model
+// MARK: - Table Row Data Model with Binding Support
 struct TorrentTableRow: Identifiable, Hashable {
     let id: Int
-    let torrent: Torrent
+    @Binding var torrent: Torrent
     
     // Computed properties for sorting
     var name: String { torrent.name }
@@ -19,28 +19,39 @@ struct TorrentTableRow: Identifiable, Hashable {
     var uploadSpeed: Int64 { torrent.rateUpload }
     var eta: Int { torrent.eta }
     var labels: [String] { torrent.labels }
-    var priority: String { 
-        // This would need to be added to Torrent model if not available
-        "Normal" // Placeholder
-    }
     
-    init(torrent: Torrent) {
-        self.id = torrent.id
-        self.torrent = torrent
+    init(torrent: Binding<Torrent>) {
+        self.id = torrent.wrappedValue.id
+        self._torrent = torrent
     }
     
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
+        // Include key properties that change to ensure proper updates
+        hasher.combine(torrent.name)
+        hasher.combine(torrent.labels)
+        hasher.combine(torrent.status)
+        hasher.combine(torrent.percentDone)
+        hasher.combine(torrent.rateDownload)
+        hasher.combine(torrent.rateUpload)
+        hasher.combine(torrent.eta)
     }
     
     static func == (lhs: TorrentTableRow, rhs: TorrentTableRow) -> Bool {
-        lhs.id == rhs.id
+        lhs.id == rhs.id &&
+        lhs.torrent.name == rhs.torrent.name &&
+        lhs.torrent.labels == rhs.torrent.labels &&
+        lhs.torrent.status == rhs.torrent.status &&
+        lhs.torrent.percentDone == rhs.torrent.percentDone &&
+        lhs.torrent.rateDownload == rhs.torrent.rateDownload &&
+        lhs.torrent.rateUpload == rhs.torrent.rateUpload &&
+        lhs.torrent.eta == rhs.torrent.eta
     }
 }
 
 // MARK: - Torrent Table View
-struct macOSTorrentListCompactView: View {
-    let torrents: [Torrent]
+struct macOSTorrentListCompact: View {
+    let torrents: [Torrent]  // Keep this to match how it's called from parent
     @Binding var selection: Set<Int>
     @State private var sortOrder = [KeyPathComparator(\TorrentTableRow.name)]
     let store: Store
@@ -49,18 +60,32 @@ struct macOSTorrentListCompactView: View {
     @State private var labelDialog: Bool = false
     @State private var labelInput: String = ""
     @State private var shouldSave: Bool = false
+    @State private var renameDialog: Bool = false
+    @State private var renameInput: String = ""
+    @State private var renameTargetId: Int? = nil
     @State private var showingError = false
     @State private var errorMessage = ""
     
+    // Create bindings to the actual torrents in the store (like expanded view does)
     private var rows: [TorrentTableRow] {
-        torrents.map { TorrentTableRow(torrent: $0) }
+        torrents.compactMap { torrent in
+            // Find the actual torrent in the store and create a binding to it
+            if let storeIndex = store.torrents.firstIndex(where: { $0.id == torrent.id }) {
+                let binding = Binding<Torrent>(
+                    get: { store.torrents[storeIndex] },
+                    set: { store.torrents[storeIndex] = $0 }
+                )
+                return TorrentTableRow(torrent: binding)
+            }
+            return nil
+        }
     }
     
     private var selectedTorrents: Binding<Set<Torrent>> {
         Binding<Set<Torrent>>(
             get: {
                 Set(selection.compactMap { id in
-                    torrents.first { $0.id == id }
+                    store.torrents.first { $0.id == id }
                 })
             },
             set: { newSelection in
@@ -189,10 +214,43 @@ struct macOSTorrentListCompactView: View {
         .contextMenu(forSelectionType: TorrentTableRow.ID.self) { selection in
             torrentContextMenu(for: selection)
         }
+        .sheet(isPresented: $renameDialog) {
+            // Determine single selected torrent for rename
+            let selectedTorrentsSet = Set(selection.compactMap { id in
+                store.torrents.first { $0.id == id }
+            })
+            if selectedTorrentsSet.count == 1, let t = selectedTorrentsSet.first {
+                RenameSheetView(
+                    title: "Rename Torrent",
+                    name: $renameInput,
+                    currentName: t.name,
+                    onCancel: {
+                        renameDialog = false
+                    },
+                    onSave: { newName in
+                        if let validation = validateNewName(newName, current: t.name) {
+                            errorMessage = validation
+                            showingError = true
+                            return
+                        }
+                        renameTorrentRoot(torrent: t, to: newName, store: store) { err in
+                            if let err = err {
+                                errorMessage = err
+                                showingError = true
+                            } else {
+                                renameDialog = false
+                            }
+                        }
+                    }
+                )
+                .frame(width: 420)
+                .padding()
+            }
+        }
         .sheet(isPresented: $labelDialog) {
             VStack(spacing: 16) {
                 let selectedTorrentsSet = Set(selection.compactMap { id in
-                    torrents.first { $0.id == id }
+                    store.torrents.first { $0.id == id }
                 })
                 
                 Text("Edit Labels\(selectedTorrentsSet.count > 1 ? " (\(selectedTorrentsSet.count) torrents)" : "")")
@@ -230,7 +288,7 @@ struct macOSTorrentListCompactView: View {
                 Button(role: .destructive) {
                     let info = makeConfig(store: store)
                     let selectedTorrentsSet = Set(selection.compactMap { id in
-                        torrents.first { $0.id == id }
+                        store.torrents.first { $0.id == id }
                     })
                     for t in selectedTorrentsSet {
                         deleteTorrent(torrent: t, erase: true, config: info.config, auth: info.auth, onDel: { response in
@@ -252,7 +310,7 @@ struct macOSTorrentListCompactView: View {
                 Button("Remove from list only") {
                     let info = makeConfig(store: store)
                     let selectedTorrentsSet = Set(selection.compactMap { id in
-                        torrents.first { $0.id == id }
+                        store.torrents.first { $0.id == id }
                     })
                     for t in selectedTorrentsSet {
                         deleteTorrent(torrent: t, erase: false, config: info.config, auth: info.auth, onDel: { response in
@@ -356,6 +414,9 @@ struct macOSTorrentListCompactView: View {
                 labelInput: $labelInput,
                 labelDialog: $labelDialog,
                 deleteDialog: $deleteDialog,
+                renameInput: $renameInput,
+                renameDialog: $renameDialog,
+                renameTargetId: $renameTargetId,
                 showingError: $showingError,
                 errorMessage: $errorMessage
             )
@@ -365,7 +426,7 @@ struct macOSTorrentListCompactView: View {
 
 #else
 // Empty struct for iOS to reference
-struct macOSTorrentListCompactView: View {
+struct macOSTorrentListCompact: View {
     let torrents: [Torrent]
     @Binding var selection: Set<Int>
     let store: Store

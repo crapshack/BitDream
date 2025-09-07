@@ -18,6 +18,9 @@ struct TorrentRowModifier: ViewModifier {
     @Binding var shouldSave: Bool
     @Binding var showingError: Bool
     @Binding var errorMessage: String
+    @Binding var renameDialog: Bool
+    @Binding var renameInput: String
+    @Binding var renameTargetId: Int?
     
     private var affectedTorrents: Set<Torrent> {
         if selectedTorrents.isEmpty {
@@ -35,6 +38,9 @@ struct TorrentRowModifier: ViewModifier {
                     labelInput: $labelInput,
                     labelDialog: $labelDialog,
                     deleteDialog: $deleteDialog,
+                    renameInput: $renameInput,
+                    renameDialog: $renameDialog,
+                    renameTargetId: $renameTargetId,
                     showingError: $showingError,
                     errorMessage: $errorMessage
                 )
@@ -116,6 +122,42 @@ struct TorrentRowModifier: ViewModifier {
             }
             .interactiveDismissDisabled(false)
         .transmissionErrorAlert(isPresented: $showingError, message: errorMessage)
+        .sheet(isPresented: $renameDialog) {
+            // Resolve target torrent using captured id or current torrent
+            let targetTorrent: Torrent? = {
+                if let id = renameTargetId {
+                    return store.torrents.first { $0.id == id }
+                }
+                return affectedTorrents.first
+            }()
+            if let t = targetTorrent {
+                RenameSheetView(
+                    title: "Rename Torrent",
+                    name: $renameInput,
+                    currentName: t.name,
+                    onCancel: {
+                        renameDialog = false
+                    },
+                    onSave: { newName in
+                        if let validation = validateNewName(newName, current: t.name) {
+                            errorMessage = validation
+                            showingError = true
+                            return
+                        }
+                        renameTorrentRoot(torrent: t, to: newName, store: store) { err in
+                            if let err = err {
+                                errorMessage = err
+                                showingError = true
+                            } else {
+                                renameDialog = false
+                            }
+                        }
+                    }
+                )
+                .frame(width: 420)
+                .padding()
+            }
+        }
     }
 }
 
@@ -127,49 +169,79 @@ func createTorrentContextMenu(
     labelInput: Binding<String>,
     labelDialog: Binding<Bool>,
     deleteDialog: Binding<Bool>,
+    renameInput: Binding<String>,
+    renameDialog: Binding<Bool>,
+    renameTargetId: Binding<Int?>,
     showingError: Binding<Bool>,
     errorMessage: Binding<String>
 ) -> some View {
     let firstTorrent = torrents.first!
     
-    // Play/Pause Button
+    // Pause Button (always shown; disabled for single stopped)
     Button(action: {
         let info = makeConfig(store: store)
-        for t in torrents {
-            playPauseTorrent(torrent: t, config: info.config, auth: info.auth, onResponse: { response in
-                handleTransmissionResponse(response,
-                    onSuccess: {
-                        // Success - torrent state will update automatically
-                    },
-                    onError: { error in
-                        errorMessage.wrappedValue = error
-                        showingError.wrappedValue = true
-                    }
-                )
-            })
+        performTransmissionStatusRequest(
+            method: "torrent-stop",
+            args: ["ids": Array(torrents.map { $0.id })] as [String: [Int]],
+            config: info.config,
+            auth: info.auth
+        ) { response in
+            handleTransmissionResponse(response,
+                onSuccess: {},
+                onError: { error in
+                    errorMessage.wrappedValue = error
+                    showingError.wrappedValue = true
+                }
+            )
         }
     }) {
         HStack {
-            Image(systemName: firstTorrent.status == TorrentStatus.stopped.rawValue ? "play" : "pause")
+            Image(systemName: "pause")
                 .foregroundStyle(.secondary)
-            Text(firstTorrent.status == TorrentStatus.stopped.rawValue ? "Resume" : "Pause")
+            Text("Pause")
         }
     }
+    .disabled(torrents.count == 1 && firstTorrent.status == TorrentStatus.stopped.rawValue)
+
+    // Resume Button (always shown; disabled for single non-stopped)
+    Button(action: {
+        let info = makeConfig(store: store)
+        performTransmissionStatusRequest(
+            method: "torrent-start",
+            args: ["ids": Array(torrents.map { $0.id })] as [String: [Int]],
+            config: info.config,
+            auth: info.auth
+        ) { response in
+            handleTransmissionResponse(response,
+                onSuccess: {},
+                onError: { error in
+                    errorMessage.wrappedValue = error
+                    showingError.wrappedValue = true
+                }
+            )
+        }
+    }) {
+        HStack {
+            Image(systemName: "play")
+                .foregroundStyle(.secondary)
+            Text("Resume")
+        }
+    }
+    .disabled(torrents.count == 1 && firstTorrent.status != TorrentStatus.stopped.rawValue)
     
-    // Resume Now Button (only show for stopped torrents)
-    if firstTorrent.status == TorrentStatus.stopped.rawValue {
-        Button(action: {
-            for t in torrents {
-                resumeTorrentNow(torrent: t, store: store)
-            }
-        }) {
-            HStack {
-                Image(systemName: "play.fill")
-                    .foregroundStyle(.secondary)
-                Text("Resume Now")
-            }
+    // Resume Now Button (always shown; disabled for single non-stopped)
+    Button(action: {
+        for t in torrents {
+            resumeTorrentNow(torrent: t, store: store)
+        }
+    }) {
+        HStack {
+            Image(systemName: "play.fill")
+                .foregroundStyle(.secondary)
+            Text("Resume Now")
         }
     }
+    .disabled(torrents.count == 1 && firstTorrent.status != TorrentStatus.stopped.rawValue)
 
     Divider()
     
@@ -234,6 +306,20 @@ func createTorrentContextMenu(
         }
     }
 
+    // Rename Button (moved into edit section)
+    Button(action: {
+        renameInput.wrappedValue = firstTorrent.name
+        renameTargetId.wrappedValue = firstTorrent.id
+        renameDialog.wrappedValue = true
+    }) {
+        HStack {
+            Image(systemName: "pencil")
+                .foregroundStyle(.secondary)
+            Text("Rename…")
+        }
+    }
+    .disabled(torrents.count != 1)
+
     Button(action: {
         // For single-torrent editing, pre-fill with existing labels.
         // For multi-torrent editing, start with empty input so new labels can be appended
@@ -248,61 +334,60 @@ func createTorrentContextMenu(
         HStack {
             Image(systemName: "tag")
                 .foregroundStyle(.secondary)
-            Text("Edit Labels")
+            Text("Edit Labels…")
         }
     }
 
     Divider()
     
-    // Copy Magnet Link Button - only show if single selection
-    if torrents.count == 1 {
-        Button(action: {
-            copyMagnetLinkToClipboard(firstTorrent.magnetLink)
-        }) {
-            HStack {
-                Image(systemName: "document.on.document")
-                    .foregroundStyle(.secondary)
-                Text("Copy Magnet Link")
-            }
+    // Copy Magnet Link Button (disabled for multi-select)
+    Button(action: {
+        copyMagnetLinkToClipboard(firstTorrent.magnetLink)
+    }) {
+        HStack {
+            Image(systemName: "document.on.document")
+                .foregroundStyle(.secondary)
+            Text("Copy Magnet Link")
         }
-        
-        Divider()
+    }
+    .disabled(torrents.count != 1)
+    
+    Divider()
 
-        // Re-announce Button
-        Button(action: {
-            for t in torrents {
-                reAnnounceToTrackers(torrent: t, store: store)
-            }
-        }) {
-            HStack {
-                Image(systemName: "arrow.left.arrow.right")
-                    .foregroundStyle(.secondary)
-                Text("Ask For More Peers")
-            }
+    // Re-announce Button (supports multi-select)
+    Button(action: {
+        for t in torrents {
+            reAnnounceToTrackers(torrent: t, store: store)
         }
+    }) {
+        HStack {
+            Image(systemName: "arrow.left.arrow.right")
+                .foregroundStyle(.secondary)
+            Text("Ask For More Peers")
+        }
+    }
 
-        // Verify Button
-        Button(action: {
-            let info = makeConfig(store: store)
-            for t in torrents {
-                verifyTorrent(torrent: t, config: info.config, auth: info.auth, onResponse: { response in
-                    handleTransmissionResponse(response,
-                        onSuccess: {
-                            // Success - verification started
-                        },
-                        onError: { error in
-                            errorMessage.wrappedValue = error
-                            showingError.wrappedValue = true
-                        }
-                    )
-                })
-            }
-        }) {
-            HStack {
-                Image(systemName: "checkmark.arrow.trianglehead.counterclockwise")
-                    .foregroundStyle(.secondary)
-                Text("Verify Local Data")
-            }
+    // Verify Button (supports multi-select)
+    Button(action: {
+        let info = makeConfig(store: store)
+        for t in torrents {
+            verifyTorrent(torrent: t, config: info.config, auth: info.auth, onResponse: { response in
+                handleTransmissionResponse(response,
+                    onSuccess: {
+                        // Success - verification started
+                    },
+                    onError: { error in
+                        errorMessage.wrappedValue = error
+                        showingError.wrappedValue = true
+                    }
+                )
+            })
+        }
+    }) {
+        HStack {
+            Image(systemName: "checkmark.arrow.trianglehead.counterclockwise")
+                .foregroundStyle(.secondary)
+            Text("Verify Local Data")
         }
     }
 
@@ -315,7 +400,56 @@ func createTorrentContextMenu(
         HStack {
             Image(systemName: "trash")
                 .foregroundStyle(.secondary)
-            Text("Delete")
+            Text("Delete…")
+        }
+    }
+}
+
+// MARK: - Rename Sheet View
+struct RenameSheetView: View {
+    let title: String
+    @Binding var name: String
+    let currentName: String
+    var onCancel: () -> Void
+    var onSave: (String) -> Void
+    @FocusState private var isNameFocused: Bool
+    
+    private var validationMessage: String? {
+        validateNewName(name, current: currentName)
+    }
+    private var isSaveDisabled: Bool {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return validationMessage != nil || trimmed == currentName
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title)
+                .font(.headline)
+            TextField("Name", text: $name)
+                .textFieldStyle(.roundedBorder)
+                .focused($isNameFocused)
+                .onSubmit {
+                    if !isSaveDisabled { onSave(name) }
+                }
+            if let msg = validationMessage {
+                Text(msg)
+                    .font(.caption)
+                    .foregroundColor(.red)
+            }
+            HStack {
+                Spacer()
+                Button("Cancel") { onCancel() }
+                    .keyboardShortcut(.cancelAction)
+                Button("Save") { onSave(name) }
+                    .keyboardShortcut(.defaultAction)
+                    .buttonStyle(.borderedProminent)
+                    .disabled(isSaveDisabled)
+            }
+        }
+        .onAppear {
+            // Defer focus to ensure sheet presentation completes
+            DispatchQueue.main.async { isNameFocused = true }
         }
     }
 }
@@ -343,9 +477,9 @@ struct LabelEditView: View {
         self._shouldSave = shouldSave
     }
     
-    /// Saves labels by merging newly entered labels with each selected torrent's
-    /// existing labels. This appends labels and does not remove or overwrite
-    /// existing labels.
+    /// Saves labels with different behavior for single vs multiple torrents:
+    /// - Single torrent: Replace labels (allows removal)
+    /// - Multiple torrents: Append labels (bulk add operation)
     private func saveAndDismiss() {
         // First add any pending tag
         if addNewTag(from: &newTagInput, to: &workingLabels) {
@@ -355,25 +489,33 @@ struct LabelEditView: View {
         // Update the binding
         labelInput = workingLabels.joined(separator: ", ")
         
-        // Merge new labels with each torrent's existing labels
-        for torrent in selectedTorrents {
-            let existingLabels = Set(torrent.labels)
-            let mergedLabels = existingLabels.union(workingLabels)
-            let sortedLabels = Array(mergedLabels).sorted()
+        if selectedTorrents.count == 1 {
+            // Single torrent: REPLACE labels (allows removal like iOS)
+            let torrent = selectedTorrents.first!
+            saveTorrentLabels(torrentId: torrent.id, labels: workingLabels, store: store) {
+                dismiss()
+            }
+        } else {
+            // Multiple torrents: APPEND labels (current behavior for bulk operations)
+            for torrent in selectedTorrents {
+                let existingLabels = Set(torrent.labels)
+                let mergedLabels = existingLabels.union(workingLabels)
+                let sortedLabels = Array(mergedLabels).sorted()
+                
+                let info = makeConfig(store: store)
+                updateTorrent(
+                    args: TorrentSetRequestArgs(ids: [torrent.id], labels: sortedLabels),
+                    info: info,
+                    onComplete: { _ in
+                        // Individual torrent updated
+                    }
+                )
+            }
             
-            let info = makeConfig(store: store)
-            updateTorrent(
-                args: TorrentSetRequestArgs(ids: [torrent.id], labels: sortedLabels),
-                info: info,
-                onComplete: { _ in
-                    // Individual torrent updated
-                }
-            )
+            // Trigger refresh and dismiss
+            refreshTransmissionData(store: store)
+            dismiss()
         }
-        
-        // Trigger refresh and dismiss
-        refreshTransmissionData(store: store)
-        dismiss()
     }
     
     var body: some View {
@@ -435,28 +577,6 @@ struct LabelEditView: View {
     }
 }
 
-// MARK: - Backward Compatibility
-// This view now just wraps the expanded view for backward compatibility
-struct macOSTorrentListRow: View {
-    @Binding var torrent: Torrent
-    var store: Store
-    @Binding var selectedTorrents: Set<Torrent>
-    let isCompact: Bool
-    
-    var body: some View {
-        if isCompact {
-            // This shouldn't be used in compact mode, but provide fallback
-            EmptyView()
-        } else {
-            macOSTorrentListExpandedView(
-                torrent: $torrent,
-                store: store,
-                selectedTorrents: $selectedTorrents
-            )
-        }
-    }
-}
-
 #else
 // Empty struct for iOS to reference - this won't be compiled on iOS but provides the type
 struct macOSTorrentListRow: View {
@@ -469,4 +589,4 @@ struct macOSTorrentListRow: View {
         EmptyView()
     }
 }
-#endif 
+#endif

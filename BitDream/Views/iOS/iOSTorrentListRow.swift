@@ -11,6 +11,8 @@ struct iOSTorrentListRow: View {
     @State var deleteDialog: Bool = false
     @State var labelDialog: Bool = false
     @State var labelInput: String = ""
+    @State private var renameDialog: Bool = false
+    @State private var renameInput: String = ""
     @State private var showingError = false
     @State private var errorMessage = ""
     @Environment(\.colorScheme) var colorScheme
@@ -122,10 +124,18 @@ struct iOSTorrentListRow: View {
                 Label("Update Priority", systemImage: "flag.badge.ellipsis")
             }
 
+            // Rename (iOS: no ellipsis)
+            Button(action: {
+                renameInput = torrent.name
+                renameDialog = true
+            }) {
+                Label("Rename...", systemImage: "pencil")
+            }
+
             Button(action: {
                 labelDialog.toggle()
             }) {
-                Label("Edit Labels", systemImage: "tag")
+                Label("Edit Labels...", systemImage: "tag")
             }
             
             Divider()
@@ -214,6 +224,58 @@ struct iOSTorrentListRow: View {
             }
             .interactiveDismissDisabled(false)
         .transmissionErrorAlert(isPresented: $showingError, message: errorMessage)
+        .sheet(isPresented: $renameDialog) {
+            NavigationView {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Rename Torrent")
+                        .font(.headline)
+                        .padding(.top)
+                    TextField("Name", text: $renameInput)
+                        .textFieldStyle(.roundedBorder)
+                        .submitLabel(.done)
+                        .onSubmit {
+                            let trimmed = renameInput.trimmingCharacters(in: .whitespacesAndNewlines)
+                            let invalid = validateNewName(renameInput, current: torrent.name) != nil || trimmed == torrent.name
+                            if !invalid {
+                                let nameToSave = trimmed
+                                renameTorrentRoot(torrent: torrent, to: nameToSave, store: store) { err in
+                                    if let err = err {
+                                        errorMessage = err
+                                        showingError = true
+                                    } else {
+                                        renameDialog = false
+                                    }
+                                }
+                            }
+                        }
+                    Spacer()
+                }
+                .padding()
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") { renameDialog = false }
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        let trimmed = renameInput.trimmingCharacters(in: .whitespacesAndNewlines)
+                        let disabled = validateNewName(renameInput, current: torrent.name) != nil || trimmed == torrent.name
+                        Button("Save") {
+                            let nameToSave = trimmed
+                            renameTorrentRoot(torrent: torrent, to: nameToSave, store: store) { err in
+                                if let err = err {
+                                    errorMessage = err
+                                    showingError = true
+                                } else {
+                                    renameDialog = false
+                                }
+                            }
+                        }
+                        .disabled(disabled)
+                    }
+                }
+            }
+            // focus handled on TextField onAppear
+        }
         .sheet(isPresented: $labelDialog) {
             NavigationView {
                 iOSLabelEditView(labelInput: $labelInput, existingLabels: torrent.labels, store: store, torrentId: torrent.id)
