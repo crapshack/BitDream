@@ -279,3 +279,55 @@ func makeConfig(store: Store) -> (config: TransmissionConfig, auth: Transmission
 
     return (config: config, auth: auth)
 }
+
+/*--------------------------------------------------------------------------------------------
+| Transmission Response Handling
+| -------------------------------------------------------------------------------------------*/
+
+/// Handles TransmissionResponse with proper error handling and user feedback
+/// - Parameters:
+///   - response: The TransmissionResponse from the API call
+///   - onSuccess: Callback executed on successful response
+///   - onError: Callback executed on error with user-friendly error message
+func handleTransmissionResponse(
+    _ response: TransmissionResponse,
+    onSuccess: @escaping () -> Void,
+    onError: @escaping (String) -> Void
+) {
+    DispatchQueue.main.async {
+        switch response {
+        case .success:
+            onSuccess()
+        case .failed:
+            onError("Operation failed. Please try again.")
+        case .unauthorized:
+            onError("Authentication failed. Please check your server credentials.")
+        case .configError:
+            onError("Connection error. Please check your server settings.")
+        @unknown default:
+            onError("An unexpected error occurred. Please try again.")
+        }
+    }
+}
+
+/// SwiftUI View modifier for displaying transmission error alerts
+struct TransmissionErrorAlert: ViewModifier {
+    @Binding var isPresented: Bool
+    let message: String
+    
+    func body(content: Content) -> some View {
+        content
+            .alert("Error", isPresented: $isPresented) {
+                Button("OK") { }
+            } message: {
+                Text(message)
+            }
+    }
+}
+
+extension View {
+    /// Adds a standardized error alert for transmission operations
+    func transmissionErrorAlert(isPresented: Binding<Bool>, message: String) -> some View {
+        modifier(TransmissionErrorAlert(isPresented: isPresented, message: message))
+    }
+}

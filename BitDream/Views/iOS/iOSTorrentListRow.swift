@@ -11,6 +11,8 @@ struct iOSTorrentListRow: View {
     @State var deleteDialog: Bool = false
     @State var labelDialog: Bool = false
     @State var labelInput: String = ""
+    @State private var showingError = false
+    @State private var errorMessage = ""
     @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
@@ -49,7 +51,15 @@ struct iOSTorrentListRow: View {
             Button(action: {
                 let info = makeConfig(store: store)
                 playPauseTorrent(torrent: torrent, config: info.config, auth: info.auth, onResponse: { response in
-                    // TODO: Handle response
+                    handleTransmissionResponse(response,
+                        onSuccess: {
+                            // Success - torrent state will update automatically
+                        },
+                        onError: { error in
+                            errorMessage = error
+                            showingError = true
+                        }
+                    )
                 })
             }) {
                 Label(torrent.status == TorrentStatus.stopped.rawValue ? "Resume" : "Pause", 
@@ -140,7 +150,15 @@ struct iOSTorrentListRow: View {
             Button(action: {
                 let info = makeConfig(store: store)
                 verifyTorrent(torrent: torrent, config: info.config, auth: info.auth, onResponse: { response in
-                    // TODO: Handle response
+                    handleTransmissionResponse(response,
+                        onSuccess: {
+                            // Success - verification started
+                        },
+                        onError: { error in
+                            errorMessage = error
+                            showingError = true
+                        }
+                    )
                 })
             }) {
                 Label("Verify Local Data", systemImage: "checkmark.arrow.trianglehead.counterclockwise")
@@ -162,7 +180,15 @@ struct iOSTorrentListRow: View {
                 Button(role: .destructive) {
                     let info = makeConfig(store: store)
                     deleteTorrent(torrent: torrent, erase: true, config: info.config, auth: info.auth, onDel: { response in
-                        // TODO: Handle response
+                        handleTransmissionResponse(response,
+                            onSuccess: {
+                                // Success - torrent deleted
+                            },
+                            onError: { error in
+                                errorMessage = error
+                                showingError = true
+                            }
+                        )
                     })
                     deleteDialog.toggle()
                 } label: {
@@ -171,7 +197,15 @@ struct iOSTorrentListRow: View {
                 Button("Remove from list only") {
                     let info = makeConfig(store: store)
                     deleteTorrent(torrent: torrent, erase: false, config: info.config, auth: info.auth, onDel: { response in
-                        // TODO: Handle response
+                        handleTransmissionResponse(response,
+                            onSuccess: {
+                                // Success - torrent removed from list
+                            },
+                            onError: { error in
+                                errorMessage = error
+                                showingError = true
+                            }
+                        )
                     })
                     deleteDialog.toggle()
                 }
@@ -179,6 +213,7 @@ struct iOSTorrentListRow: View {
                 Text("Do you want to delete the file(s) from the disk?")
             }
             .interactiveDismissDisabled(false)
+        .transmissionErrorAlert(isPresented: $showingError, message: errorMessage)
         .sheet(isPresented: $labelDialog) {
             NavigationView {
                 iOSLabelEditView(labelInput: $labelInput, existingLabels: torrent.labels, store: store, torrentId: torrent.id)

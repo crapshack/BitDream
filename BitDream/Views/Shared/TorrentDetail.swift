@@ -58,8 +58,16 @@ func fetchTorrentFiles(transferId: Int, store: Store, completion: @escaping ([To
 func toggleTorrentPlayPause(torrent: Torrent, store: Store, completion: @escaping () -> Void = {}) {
     let info = makeConfig(store: store)
     playPauseTorrent(torrent: torrent, config: info.config, auth: info.auth, onResponse: { response in
-        // TODO: Handle response
-        completion()
+        handleTransmissionResponse(response,
+            onSuccess: {
+                completion()
+            },
+            onError: { _ in
+                // For play/pause operations, we'll silently fail and still call completion
+                // since the UI should update regardless to reflect current state
+                completion()
+            }
+        )
     })
 }
 

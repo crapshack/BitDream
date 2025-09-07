@@ -12,6 +12,8 @@ struct macOSTorrentListRow: View {
     @State var labelDialog: Bool = false
     @State var labelInput: String = ""
     @State private var shouldSave: Bool = false
+    @State private var showingError = false
+    @State private var errorMessage = ""
     @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
@@ -53,7 +55,15 @@ struct macOSTorrentListRow: View {
                 let info = makeConfig(store: store)
                 for t in torrentsToAct {
                     playPauseTorrent(torrent: t, config: info.config, auth: info.auth, onResponse: { response in
-                        // TODO: Handle response
+                        handleTransmissionResponse(response,
+                            onSuccess: {
+                                // Success - torrent state will update automatically
+                            },
+                            onError: { error in
+                                errorMessage = error
+                                showingError = true
+                            }
+                        )
                     })
                 }
             }) {
@@ -163,7 +173,7 @@ struct macOSTorrentListRow: View {
                     copyMagnetLinkToClipboard(torrent.magnetLink)
                 }) {
                     HStack {
-                        Image(systemName: "document.on.document.fill")
+                        Image(systemName: "document.on.document")
                             .foregroundStyle(.secondary)
                         Text("Copy Magnet Link")
                     }
@@ -190,7 +200,15 @@ struct macOSTorrentListRow: View {
                     let info = makeConfig(store: store)
                     for t in torrentsToAct {
                         verifyTorrent(torrent: t, config: info.config, auth: info.auth, onResponse: { response in
-                            // TODO: Handle response
+                            handleTransmissionResponse(response,
+                                onSuccess: {
+                                    // Success - verification started
+                                },
+                                onError: { error in
+                                    errorMessage = error
+                                    showingError = true
+                                }
+                            )
                         })
                     }
                 }) {
@@ -254,7 +272,15 @@ struct macOSTorrentListRow: View {
                     let info = makeConfig(store: store)
                     for t in torrentsToDelete {
                         deleteTorrent(torrent: t, erase: true, config: info.config, auth: info.auth, onDel: { response in
-                            // TODO: Handle response
+                            handleTransmissionResponse(response,
+                                onSuccess: {
+                                    // Success - torrent deleted
+                                },
+                                onError: { error in
+                                    errorMessage = error
+                                    showingError = true
+                                }
+                            )
                         })
                     }
                     deleteDialog.toggle()
@@ -265,7 +291,15 @@ struct macOSTorrentListRow: View {
                     let info = makeConfig(store: store)
                     for t in torrentsToDelete {
                         deleteTorrent(torrent: t, erase: false, config: info.config, auth: info.auth, onDel: { response in
-                            // TODO: Handle response
+                            handleTransmissionResponse(response,
+                                onSuccess: {
+                                    // Success - torrent removed from list
+                                },
+                                onError: { error in
+                                    errorMessage = error
+                                    showingError = true
+                                }
+                            )
                         })
                     }
                     deleteDialog.toggle()
@@ -274,6 +308,7 @@ struct macOSTorrentListRow: View {
                 Text("Do you want to delete the file(s) from the disk?")
             }
             .interactiveDismissDisabled(false)
+        .transmissionErrorAlert(isPresented: $showingError, message: errorMessage)
     }
     
     private var torrentsToDelete: Set<Torrent> {

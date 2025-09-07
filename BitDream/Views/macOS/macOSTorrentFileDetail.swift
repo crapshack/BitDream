@@ -240,8 +240,16 @@ struct macOSTorrentFileDetail: View {
             wanted: wanted,
             info: info
         ) { response in
-            // TODO: Handle response and refresh file data
-            print("Set wanted status: \(response)")
+            handleTransmissionResponse(response,
+                onSuccess: {
+                    print("Successfully set wanted status")
+                    // File data will refresh automatically through the binding
+                },
+                onError: { error in
+                    print("Failed to set wanted status: \(error)")
+                    // Could add user-facing error handling here if needed
+                }
+            )
         }
         
         // Optimistic update
@@ -258,8 +266,16 @@ struct macOSTorrentFileDetail: View {
             priority: priority,
             info: info
         ) { response in
-            // TODO: Handle response and refresh file data
-            print("Set priority: \(response)")
+            handleTransmissionResponse(response,
+                onSuccess: {
+                    print("Successfully set file priority")
+                    // File data will refresh automatically through the binding
+                },
+                onError: { error in
+                    print("Failed to set file priority: \(error)")
+                    // Could add user-facing error handling here if needed
+                }
+            )
         }
         
         // Optimistic update
