@@ -232,54 +232,58 @@ struct macOSTorrentFileDetail: View {
     
     private func setFilesWanted(_ selectedRows: [TorrentFileRow], wanted: Bool) {
         let fileIndices = selectedRows.map { $0.fileIndex }
-        let info = makeConfig(store: store)
-        
-        setFileWantedStatus(
+
+        // Snapshot previous rows for revert-on-failure
+        let previousRows: [(index: Int, row: TorrentFileRow)] = selectedRows.compactMap { row in
+            if let idx = viewModel.allRows.firstIndex(where: { $0.id == row.id }) {
+                return (idx, viewModel.allRows[idx])
+            }
+            return nil
+        }
+
+        FileActionExecutor.setWanted(
             torrentId: torrentId,
             fileIndices: fileIndices,
+            store: store,
             wanted: wanted,
-            info: info
-        ) { response in
-            handleTransmissionResponse(response,
-                onSuccess: {
-                    print("Successfully set wanted status")
-                    // File data will refresh automatically through the binding
-                },
-                onError: { error in
-                    print("Failed to set wanted status: \(error)")
-                    // Could add user-facing error handling here if needed
+            optimisticApply: { updateLocalFileStatus(selectedRows, wanted: wanted) },
+            revert: {
+                for (idx, oldRow) in previousRows {
+                    viewModel.allRows[idx] = oldRow
                 }
-            )
-        }
-        
-        // Optimistic update
-        updateLocalFileStatus(selectedRows, wanted: wanted)
+            },
+            onComplete: { response in
+                print("macOS set wanted status: \(response)")
+            }
+        )
     }
     
     private func setFilesPriority(_ selectedRows: [TorrentFileRow], priority: FilePriority) {
         let fileIndices = selectedRows.map { $0.fileIndex }
-        let info = makeConfig(store: store)
-        
-        setFilePriority(
+
+        // Snapshot previous rows for revert-on-failure
+        let previousRows: [(index: Int, row: TorrentFileRow)] = selectedRows.compactMap { row in
+            if let idx = viewModel.allRows.firstIndex(where: { $0.id == row.id }) {
+                return (idx, viewModel.allRows[idx])
+            }
+            return nil
+        }
+
+        FileActionExecutor.setPriority(
             torrentId: torrentId,
             fileIndices: fileIndices,
+            store: store,
             priority: priority,
-            info: info
-        ) { response in
-            handleTransmissionResponse(response,
-                onSuccess: {
-                    print("Successfully set file priority")
-                    // File data will refresh automatically through the binding
-                },
-                onError: { error in
-                    print("Failed to set file priority: \(error)")
-                    // Could add user-facing error handling here if needed
+            optimisticApply: { updateLocalFilePriority(selectedRows, priority: priority) },
+            revert: {
+                for (idx, oldRow) in previousRows {
+                    viewModel.allRows[idx] = oldRow
                 }
-            )
-        }
-        
-        // Optimistic update
-        updateLocalFilePriority(selectedRows, priority: priority)
+            },
+            onComplete: { response in
+                print("macOS set file priority: \(response)")
+            }
+        )
     }
     
     private func updateLocalFileStatus(_ selectedRows: [TorrentFileRow], wanted: Bool) {

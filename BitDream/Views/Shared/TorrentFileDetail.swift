@@ -328,3 +328,71 @@ struct TorrentFileRow: Identifiable {
         self.wanted = wanted
     }
 }
+
+// MARK: - Shared File Action Executor
+
+/// Namespaced executor that standardizes optimistic apply + revert-on-failure
+/// across platforms while keeping all network calls in TransmissionFunctions.
+enum FileActionExecutor {
+    /// Set wanted status for specific file indices with optimistic update and revert on failure
+    static func setWanted(
+        torrentId: Int,
+        fileIndices: [Int],
+        store: Store,
+        wanted: Bool,
+        optimisticApply: @escaping () -> Void,
+        revert: @escaping () -> Void,
+        onComplete: ((TransmissionResponse) -> Void)? = nil
+    ) {
+        // Apply UI changes immediately on the main thread
+        DispatchQueue.main.async {
+            optimisticApply()
+        }
+
+        let info = makeConfig(store: store)
+        setFileWantedStatus(
+            torrentId: torrentId,
+            fileIndices: fileIndices,
+            wanted: wanted,
+            info: info
+        ) { response in
+            if response != .success {
+                DispatchQueue.main.async {
+                    revert()
+                }
+            }
+            onComplete?(response)
+        }
+    }
+
+    /// Set priority for specific file indices with optimistic update and revert on failure
+    static func setPriority(
+        torrentId: Int,
+        fileIndices: [Int],
+        store: Store,
+        priority: FilePriority,
+        optimisticApply: @escaping () -> Void,
+        revert: @escaping () -> Void,
+        onComplete: ((TransmissionResponse) -> Void)? = nil
+    ) {
+        // Apply UI changes immediately on the main thread
+        DispatchQueue.main.async {
+            optimisticApply()
+        }
+
+        let info = makeConfig(store: store)
+        setFilePriority(
+            torrentId: torrentId,
+            fileIndices: fileIndices,
+            priority: priority,
+            info: info
+        ) { response in
+            if response != .success {
+                DispatchQueue.main.async {
+                    revert()
+                }
+            }
+            onComplete?(response)
+        }
+    }
+}

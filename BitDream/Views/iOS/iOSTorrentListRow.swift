@@ -240,6 +240,12 @@ struct iOSLabelEditView: View {
         self.torrentId = torrentId
     }
     
+    private var sortedLabels: [String] {
+        Array(workingLabels).sorted { lhs, rhs in
+            lhs.localizedCaseInsensitiveCompare(rhs) == .orderedAscending
+        }
+    }
+    
     private func saveAndDismiss() {
         // First add any pending tag
         if addNewTag(from: &newTagInput, to: &workingLabels) {
@@ -265,7 +271,7 @@ struct iOSLabelEditView: View {
                         .padding(.horizontal)
                     
                     FlowLayout(spacing: 4) {
-                        ForEach(Array(workingLabels).sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }, id: \.self) { label in
+                        ForEach(sortedLabels, id: \.self) { label in
                             LabelTag(label: label) {
                                 workingLabels.remove(label)
                                 labelInput = workingLabels.joined(separator: ", ")
@@ -279,10 +285,10 @@ struct iOSLabelEditView: View {
                             .textFieldStyle(.roundedBorder)
                             .focused($isInputFocused)
                             .submitLabel(.done)
-                            .onSubmit(addNewTag)
+                            .onSubmit { addNewTag(from: &newTagInput, to: &workingLabels) }
                         
                         if !newTagInput.isEmpty {
-                            Button(action: addNewTag) {
+                            Button(action: { addNewTag(from: &newTagInput, to: &workingLabels) }) {
                                 Image(systemName: "plus.circle.fill")
                                     .foregroundColor(.accentColor)
                             }

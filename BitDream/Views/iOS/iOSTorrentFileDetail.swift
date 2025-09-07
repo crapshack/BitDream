@@ -305,41 +305,31 @@ struct iOSTorrentFileDetail: View {
     // MARK: - File Operations
     
     private func setFileWanted(_ row: TorrentFileRow, wanted: Bool) {
-        // Optimistic update - same pattern as macOS
-        updateLocalFileStatus(fileIndex: row.fileIndex, wanted: wanted)
-        
-        let info = makeConfig(store: store)
-        setFileWantedStatus(
+        FileActionExecutor.setWanted(
             torrentId: torrentId,
             fileIndices: [row.fileIndex],
+            store: store,
             wanted: wanted,
-            info: info
-        ) { response in
-            print("Set wanted status: \(response)")
-            if response != .success {
-                // Revert on failure
-                revertToOriginalData()
+            optimisticApply: { updateLocalFileStatus(fileIndex: row.fileIndex, wanted: wanted) },
+            revert: { revertToOriginalData() },
+            onComplete: { response in
+                print("Set wanted status: \(response)")
             }
-        }
+        )
     }
     
     private func setFilePriority(_ row: TorrentFileRow, priority: FilePriority) {
-        // Optimistic update - same pattern as macOS
-        updateLocalFilePriority(fileIndex: row.fileIndex, priority: priority)
-        
-        let info = makeConfig(store: store)
-        setFilePriority(
+        FileActionExecutor.setPriority(
             torrentId: torrentId,
             fileIndices: [row.fileIndex],
+            store: store,
             priority: priority,
-            info: info
-        ) { response in
-            print("Set priority: \(response)")
-            if response != .success {
-                // Revert on failure
-                revertToOriginalData()
+            optimisticApply: { updateLocalFilePriority(fileIndex: row.fileIndex, priority: priority) },
+            revert: { revertToOriginalData() },
+            onComplete: { response in
+                print("Set priority: \(response)")
             }
-        }
+        )
     }
     
     // MARK: - Optimistic Updates
