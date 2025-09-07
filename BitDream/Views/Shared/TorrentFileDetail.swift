@@ -4,12 +4,12 @@ import KeychainAccess
 import UniformTypeIdentifiers
 
 // Priority enum for torrent files
-public enum FilePriority: Int {
+enum FilePriority: Int {
     case low = -1
     case normal = 0
     case high = 1
     
-    public var displayText: String {
+    var displayText: String {
         switch self {
         case .low: return "Low"
         case .normal: return "Normal"
@@ -17,7 +17,7 @@ public enum FilePriority: Int {
         }
     }
     
-    public var color: Color {
+    var color: Color {
         switch self {
         case .low: return .orange
         case .normal: return .secondary
@@ -279,47 +279,47 @@ struct FileProgressView: View {
 
 // MARK: - Shared Data Model
 
-public class TorrentFileRow: NSObject, Identifiable {
-    public let id: String
-    public let name: String
-    public let displayName: String
-    public let fileIndex: Int
-    public let size: Int64
-    public let bytesCompleted: Int64
-    public let percentDone: Double
-    public let priority: Int
-    public let wanted: Bool
+struct TorrentFileRow: Identifiable {
+    let id: String
+    let name: String
+    let displayName: String
+    let fileIndex: Int
+    let size: Int64
+    let bytesCompleted: Int64
+    let percentDone: Double
+    let priority: Int
+    let wanted: Bool
     
     // Computed properties for display
-    public var sizeDisplay: String {
+    var sizeDisplay: String {
         byteCountFormatter.string(fromByteCount: size)
     }
     
-    public var downloadedDisplay: String {
+    var downloadedDisplay: String {
         byteCountFormatter.string(fromByteCount: bytesCompleted)
     }
     
-    public var progressDisplay: String {
+    var progressDisplay: String {
         "\(Int(percentDone * 100))%"
     }
     
-    public var fileExtension: String {
+    var fileExtension: String {
         BitDream.fileExtension(from: name)
     }
     
-    public var fileSymbol: String {
+    var fileSymbol: String {
         symbolForPath(name)
     }
     
-    public var priorityDisplay: String {
+    var priorityDisplay: String {
         (FilePriority(rawValue: priority) ?? .normal).displayText
     }
     
-    public var statusDisplay: String {
+    var statusDisplay: String {
         FileStatus.displayText(for: wanted)
     }
     
-    public init(file: TorrentFile, stats: TorrentFileStats, percentDone: Double, priority: Int, wanted: Bool, displayName: String, fileIndex: Int) {
+    init(file: TorrentFile, stats: TorrentFileStats, percentDone: Double, priority: Int, wanted: Bool, displayName: String, fileIndex: Int) {
         self.id = file.id
         self.name = file.name
         self.displayName = displayName
@@ -329,6 +329,5 @@ public class TorrentFileRow: NSObject, Identifiable {
         self.percentDone = percentDone
         self.priority = priority
         self.wanted = wanted
-        super.init()
     }
 }

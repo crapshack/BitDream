@@ -154,7 +154,8 @@ struct macOSTorrentListRow: View {
             }
 
             Button(action: {
-                // For additive mode, start with empty input
+                // Start with empty input so new labels can be added to the selected torrents
+                // without removing or overwriting existing labels.
                 labelInput = ""
                 labelDialog.toggle()
             }) {
@@ -342,6 +343,9 @@ struct LabelEditView: View {
         self._shouldSave = shouldSave
     }
     
+    /// Saves labels by merging newly entered labels with each selected torrent's
+    /// existing labels. This appends labels and does not remove or overwrite
+    /// existing labels.
     private func saveAndDismiss() {
         // First add any pending tag
         addNewTag()
@@ -349,7 +353,7 @@ struct LabelEditView: View {
         // Update the binding
         updateLabelInput()
         
-        // For additive mode: merge new labels with each torrent's existing labels
+        // Merge new labels with each torrent's existing labels
         for torrent in selectedTorrents {
             let existingLabels = Set(torrent.labels)
             let mergedLabels = existingLabels.union(workingLabels)

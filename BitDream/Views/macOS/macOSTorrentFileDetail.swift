@@ -287,7 +287,7 @@ struct macOSTorrentFileDetail: View {
         for row in selectedRows {
             if let index = viewModel.allRows.firstIndex(where: { $0.id == row.id }) {
                 let updatedRow = TorrentFileRow(
-                    file: row.name == viewModel.allRows[index].name ? files[row.fileIndex] : files[row.fileIndex],
+                    file: files[row.fileIndex],
                     stats: TorrentFileStats(
                         bytesCompleted: viewModel.allRows[index].bytesCompleted,
                         wanted: wanted,
