@@ -22,6 +22,13 @@ public enum TorrentPriority: String {
     case low = "priority-low"
 }
 
+// Priority enum for torrent files
+public enum FilePriority: Int {
+    case low = -1
+    case normal = 0
+    case high = 1
+}
+
 public enum TorrentStatus: Int {
     case stopped = 0
     case queuedToVerify = 1
@@ -227,6 +234,8 @@ public struct TorrentSetRequestArgs: Codable {
     public var priorityHigh: [Int]?
     public var priorityLow: [Int]?
     public var priorityNormal: [Int]?
+    public var filesWanted: [Int]?
+    public var filesUnwanted: [Int]?
     
     public init(ids: [Int]) {
         self.ids = ids
@@ -266,6 +275,8 @@ public struct TorrentSetRequestArgs: Codable {
         case priorityHigh = "priority-high"
         case priorityLow = "priority-low"
         case priorityNormal = "priority-normal"
+        case filesWanted = "files-wanted"
+        case filesUnwanted = "files-unwanted"
     }
 }
 

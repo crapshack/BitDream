@@ -13,6 +13,7 @@ struct iOSTorrentDetail: View {
     
     @State public var files: [TorrentFile] = []
     @State public var fileStats: [TorrentFileStats] = []
+    @State private var isShowingFilesSheet = false
     
     var body: some View {
         // Use shared formatting function
@@ -49,14 +50,20 @@ struct iOSTorrentDetail: View {
                                 .foregroundColor(.gray)
                         }
                         
-                        NavigationLink(destination: iOSTorrentFileDetail(files: files, fileStats: fileStats)) {
+                        Button(action: {
+                            isShowingFilesSheet = true
+                        }) {
                             HStack {
                                 Text("Files")
                                 Spacer()
                                 Text("\(files.count)")
                                     .foregroundColor(.gray)
+                                Image(systemName: "chevron.right")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
                             }
                         }
+                        .buttonStyle(.plain)
                     }
                     
                     Section(header: Text("Stats")) {
@@ -80,7 +87,7 @@ struct iOSTorrentDetail: View {
                         }
                     }
                     
-                    Section {
+                    Section(header: Text("Additional Info")) {
                         HStack {
                             Text("Availability")
                             Spacer()
@@ -95,14 +102,17 @@ struct iOSTorrentDetail: View {
                         }
                     }
                     
-                    // Add Wave Progress View
-                    Section(header: Text("Download Progress")) {
-                        WaveProgressView(progress: torrent.percentDone, 
-                                        color: statusColor(for: torrent), 
-                                        secondaryColor: statusColor(for: torrent).opacity(0.7))
-                            .frame(height: 120)
+                    // Beautiful Dedicated Labels Section (Display Only)
+                    if !torrent.labels.isEmpty {
+                        Section(header: Text("Labels")) {
+                            FlowLayout(spacing: 6) {
+                                ForEach(torrent.labels.sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }, id: \.self) { label in
+                                    DetailViewLabelTag(label: label, isLarge: false)
+                                }
+                            }
                             .padding(.vertical, 8)
-                            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                        }
                     }
                     
                     Button(role: .destructive, action: {
@@ -132,6 +142,42 @@ struct iOSTorrentDetail: View {
                 TorrentDetailToolbar(torrent: torrent, store: store)
             }
         }
+        .sheet(isPresented: $isShowingFilesSheet) {
+            NavigationView {
+                iOSTorrentFileDetail(files: files, fileStats: fileStats, torrentId: torrent.id, store: store)
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarTrailing) {
+                            Button("Done") {
+                                isShowingFilesSheet = false
+                            }
+                        }
+                    }
+            }
+        }
+    }
+}
+
+// Enhanced LabelTag component for detail views
+struct DetailViewLabelTag: View {
+    let label: String
+    var isLarge: Bool = false
+    
+    var body: some View {
+        Text(label)
+            .font(isLarge ? .subheadline : .caption)
+            .fontWeight(.medium)
+            .padding(.horizontal, isLarge ? 8 : 6)
+            .padding(.vertical, isLarge ? 4 : 3)
+            .background(
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.accentColor.opacity(0.12))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 4)
+                    .stroke(Color.accentColor.opacity(0.3), lineWidth: 1)
+            )
+            .foregroundColor(.primary)
     }
 }
 #else

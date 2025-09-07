@@ -13,8 +13,11 @@ struct macOSTorrentDetail: View {
     @Binding var torrent: Torrent
     
     @State public var files: [TorrentFile] = []
-    @State private var isShowingFilesSheet = false
     @State private var fileStats: [TorrentFileStats] = []
+    @State private var isShowingFilesSheet = false
+    @State private var showingDeleteConfirmation = false
+    @State private var showingDeleteError = false
+    @State private var deleteErrorMessage = ""
     
     var body: some View {
         // Use shared formatting function
@@ -39,11 +42,9 @@ struct macOSTorrentDetail: View {
                 
                 // General section
                 GroupBox {
-                    VStack(alignment: .leading, spacing: 10) {
-                        // Section header with proper spacing
-                        Label("General", systemImage: "info.circle")
-                            .font(.headline)
-                            .padding(.bottom, 10)
+                    VStack(alignment: .leading, spacing: 12) {
+                        // Native macOS section header
+                        macOSSectionHeader("General", icon: "info.circle")
                         
                         DetailRow(label: "Name", value: torrent.name)
                         
@@ -63,112 +64,119 @@ struct macOSTorrentDetail: View {
                                 isShowingFilesSheet = true
                             } label: {
                                 HStack(spacing: 4) {
+                                    Image(systemName: "document")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(.accentColor)
                                     Text("\(files.count)")
                                         .foregroundColor(.accentColor)
-                                    
-                                    Image(systemName: "text.magnifyingglass")
-                                        .font(.system(size: 11))
-                                        .foregroundColor(.accentColor)
                                 }
-                                .padding(.vertical, 2)
-                                .padding(.horizontal, 6)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 4)
-                                        .strokeBorder(Color.accentColor.opacity(0.5), lineWidth: 1)
-                                )
                             }
-                            .buttonStyle(PlainButtonStyle())
+                            .buttonStyle(.bordered)
+                            .help("View files in this torrent")
                         }
                     }
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 12)
+                    .padding(.vertical, 16)
+                    .padding(.horizontal, 20)
                 }
-                .padding(.bottom, 4)
+                .padding(.bottom, 8)
                 
                 // Stats section
                 GroupBox {
                     VStack(alignment: .leading, spacing: 10) {
-                        // Section header with proper spacing
-                        Label("Stats", systemImage: "chart.bar")
-                            .font(.headline)
-                            .padding(.bottom, 10)
+                        // Native macOS section header
+                        macOSSectionHeader("Stats", icon: "chart.bar")
                         
                         DetailRow(label: "Downloaded", value: details.downloadedFormatted)
                         DetailRow(label: "Size When Done", value: details.sizeWhenDoneFormatted)
                         DetailRow(label: "Progress", value: details.percentComplete)
                     }
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 12)
+                    .padding(.vertical, 16)
+                    .padding(.horizontal, 20)
                 }
-                .padding(.bottom, 4)
-                
-                // Progress Wave section
-                GroupBox {
-                    VStack(alignment: .leading, spacing: 10) {
-                        // Section header with proper spacing
-                        Label("Download Progress", systemImage: "waveform.path")
-                            .font(.headline)
-                            .padding(.bottom, 10)
-                        
-                        WaveProgressView(progress: torrent.percentDone, 
-                                        color: statusColor(for: torrent), 
-                                        secondaryColor: statusColor(for: torrent).opacity(0.7))
-                            .frame(height: 120)
-                            .padding(.vertical, 8)
-                    }
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 12)
-                }
-                .padding(.bottom, 4)
+                .padding(.bottom, 8)
                 
                 // Additional Info section
                 GroupBox {
                     VStack(alignment: .leading, spacing: 10) {
-                        // Section header with proper spacing
-                        Label("Additional Info", systemImage: "doc.text")
-                            .font(.headline)
-                            .padding(.bottom, 10)
+                        // Native macOS section header
+                        macOSSectionHeader("Additional Info", icon: "doc.text")
                         
                         DetailRow(label: "Availability", value: details.percentAvailable)
                         DetailRow(label: "Last Activity", value: details.activityDate)
                     }
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 12)
+                    .padding(.vertical, 16)
+                    .padding(.horizontal, 20)
                 }
-                .padding(.bottom, 4)
+                .padding(.bottom, 8)
+                
+                // Beautiful Dedicated Labels Section (Display Only)
+                if !torrent.labels.isEmpty {
+                    GroupBox {
+                        VStack(alignment: .leading, spacing: 16) {
+                            // Native macOS section header
+                            macOSSectionHeader("Labels", icon: "tag")
+                            
+                            // Labels display
+                            FlowLayout(spacing: 6) {
+                                ForEach(torrent.labels.sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }, id: \.self) { label in
+                                    DetailViewLabelTag(label: label, isLarge: false)
+                                }
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .padding(.vertical, 16)
+                        .padding(.horizontal, 20)
+                    }
+                    .padding(.bottom, 8)
+                }
                 
                 // Actions
                 HStack {
                     Spacer()
                     Button(role: .destructive, action: {
-                        //viewContext.delete(torrent.self)
-                        //try? viewContext.save()
-                        //dismiss()
+                        showingDeleteConfirmation = true
                     }) {
                         Label("Delete Dream", systemImage: "trash")
                     }
-                    .buttonStyle(.borderless)
-                    .padding(.vertical, 4)
                 }
-                .padding(.top, 4)
+                .padding(.top, 8)
             }
             .padding(20)
         }
         .sheet(isPresented: $isShowingFilesSheet) {
-            VStack {
-                HStack {
-                    Text("Files for \(torrent.name)")
-                        .font(.headline)
-                    Spacer()
-                    Button("Done") {
-                        isShowingFilesSheet = false
+            let totalSizeFormatted = byteCountFormatter.string(fromByteCount: files.reduce(0) { $0 + $1.length })
+            
+            VStack(spacing: 0) {
+                // Header with proper hierarchy
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Files")
+                                .font(.title2)
+                                .fontWeight(.semibold)
+                            
+                            Text("\(torrent.name) • \(files.count) files • \(totalSizeFormatted)")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                        }
+                        
+                        Spacer()
+                        
+                        Button("Done") {
+                            isShowingFilesSheet = false
+                        }
                     }
                 }
-                .padding()
+                .padding(.horizontal, 20)
+                .padding(.vertical, 16)
                 
-                macOSTorrentFileDetail(files: files, fileStats: fileStats)
+                Divider()
+                
+                macOSTorrentFileDetail(files: files, fileStats: fileStats, torrentId: torrent.id, store: store)
             }
-            .frame(width: 600, height: 400)
+            .frame(minWidth: 1000, minHeight: 800)
         }
         .onAppear{
             // Use shared function to fetch files
@@ -181,6 +189,65 @@ struct macOSTorrentDetail: View {
             // Use shared toolbar
             TorrentDetailToolbar(torrent: torrent, store: store)
         }
+        .alert("Delete Torrent", isPresented: $showingDeleteConfirmation) {
+            Button(role: .destructive) {
+                let info = makeConfig(store: store)
+                deleteTorrent(torrent: torrent, erase: true, config: info.config, auth: info.auth, onDel: { response in
+                    handleTransmissionResponse(response,
+                        onSuccess: {
+                            dismiss()
+                        },
+                        onError: { errorMessage in
+                            deleteErrorMessage = errorMessage
+                            showingDeleteError = true
+                        }
+                    )
+                })
+            } label: {
+                Text("Delete file(s)")
+            }
+            Button("Remove from list only") {
+                let info = makeConfig(store: store)
+                deleteTorrent(torrent: torrent, erase: false, config: info.config, auth: info.auth, onDel: { response in
+                    handleTransmissionResponse(response,
+                        onSuccess: {
+                            dismiss()
+                        },
+                        onError: { errorMessage in
+                            deleteErrorMessage = errorMessage
+                            showingDeleteError = true
+                        }
+                    )
+                })
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("Do you want to delete the file(s) from the disk?")
+        }
+        .transmissionErrorAlert(isPresented: $showingDeleteError, message: deleteErrorMessage)
+    }
+}
+
+// Enhanced LabelTag component for detail views
+struct DetailViewLabelTag: View {
+    let label: String
+    var isLarge: Bool = false
+    
+    var body: some View {
+        Text(label)
+            .font(isLarge ? .subheadline : .caption)
+            .fontWeight(.medium)
+            .padding(.horizontal, isLarge ? 8 : 6)
+            .padding(.vertical, isLarge ? 4 : 3)
+            .background(
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.accentColor.opacity(0.12))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 4)
+                    .stroke(Color.accentColor.opacity(0.3), lineWidth: 1)
+            )
+            .foregroundColor(.primary)
     }
 }
 
@@ -210,6 +277,34 @@ struct DetailRow<Content: View>: View {
             Spacer()
         }
         .padding(.vertical, 2)
+    }
+}
+
+// Native macOS-style section header component
+struct macOSSectionHeader: View {
+    let title: String
+    let icon: String
+    
+    init(_ title: String, icon: String) {
+        self.title = title
+        self.icon = icon
+    }
+    
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(.secondary)
+            
+            Text(title)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(.secondary)
+                .textCase(.uppercase)
+                .tracking(0.5)
+            
+            Spacer()
+        }
+        .padding(.bottom, 8)
     }
 }
 #else

@@ -12,6 +12,8 @@ struct macOSTorrentListRow: View {
     @State var labelDialog: Bool = false
     @State var labelInput: String = ""
     @State private var shouldSave: Bool = false
+    @State private var showingError = false
+    @State private var errorMessage = ""
     @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
@@ -46,14 +48,21 @@ struct macOSTorrentListRow: View {
         .contentShape(Rectangle())
         .padding([.top, .bottom, .leading, .trailing], 10)
         .contextMenu {
-            let torrentsToAct = selectedTorrents.contains(torrent) ? selectedTorrents : Set([torrent])
-            
+ 
             // Play/Pause Button
             Button(action: {
                 let info = makeConfig(store: store)
-                for t in torrentsToAct {
+                for t in affectedTorrents {
                     playPauseTorrent(torrent: t, config: info.config, auth: info.auth, onResponse: { response in
-                        // TODO: Handle response
+                        handleTransmissionResponse(response,
+                            onSuccess: {
+                                // Success - torrent state will update automatically
+                            },
+                            onError: { error in
+                                errorMessage = error
+                                showingError = true
+                            }
+                        )
                     })
                 }
             }) {
@@ -67,8 +76,7 @@ struct macOSTorrentListRow: View {
             // Resume Now Button (only show for stopped torrents)
             if torrent.status == TorrentStatus.stopped.rawValue {
                 Button(action: {
-                    let torrentsToAct = selectedTorrents.contains(torrent) ? selectedTorrents : Set([torrent])
-                    for t in torrentsToAct {
+                    for t in affectedTorrents {
                         resumeTorrentNow(torrent: t, store: store)
                     }
                 }) {
@@ -88,7 +96,7 @@ struct macOSTorrentListRow: View {
                     let info = makeConfig(store: store)
                     updateTorrent(
                         args: TorrentSetRequestArgs(
-                            ids: Array(torrentsToAct.map { $0.id }),
+                            ids: Array(affectedTorrents.map { $0.id }),
                             priority: .high
                         ),
                         info: info,
@@ -105,7 +113,7 @@ struct macOSTorrentListRow: View {
                     let info = makeConfig(store: store)
                     updateTorrent(
                         args: TorrentSetRequestArgs(
-                            ids: Array(torrentsToAct.map { $0.id }),
+                            ids: Array(affectedTorrents.map { $0.id }),
                             priority: .normal
                         ),
                         info: info,
@@ -122,7 +130,7 @@ struct macOSTorrentListRow: View {
                     let info = makeConfig(store: store)
                     updateTorrent(
                         args: TorrentSetRequestArgs(
-                            ids: Array(torrentsToAct.map { $0.id }),
+                            ids: Array(affectedTorrents.map { $0.id }),
                             priority: .low
                         ),
                         info: info,
@@ -144,7 +152,14 @@ struct macOSTorrentListRow: View {
             }
 
             Button(action: {
-                labelInput = torrent.labels.joined(separator: ", ")
+                // For single-torrent editing, pre-fill with existing labels.
+                // For multi-torrent editing, start with empty input so new labels can be appended
+                // without removing or overwriting existing labels.
+                if affectedTorrents.count == 1 {
+                    labelInput = torrent.labels.joined(separator: ", ")
+                } else {
+                    labelInput = ""
+                }
                 labelDialog.toggle()
             }) {
                 HStack {
@@ -162,7 +177,7 @@ struct macOSTorrentListRow: View {
                     copyMagnetLinkToClipboard(torrent.magnetLink)
                 }) {
                     HStack {
-                        Image(systemName: "document.on.document.fill")
+                        Image(systemName: "document.on.document")
                             .foregroundStyle(.secondary)
                         Text("Copy Magnet Link")
                     }
@@ -172,8 +187,7 @@ struct macOSTorrentListRow: View {
 
                 // Re-announce Button
                 Button(action: {
-                    let torrentsToAct = selectedTorrents.contains(torrent) ? selectedTorrents : Set([torrent])
-                    for t in torrentsToAct {
+                    for t in affectedTorrents {
                         reAnnounceToTrackers(torrent: t, store: store)
                     }
                 }) {
@@ -187,9 +201,17 @@ struct macOSTorrentListRow: View {
                 // Verify Button
                 Button(action: {
                     let info = makeConfig(store: store)
-                    for t in torrentsToAct {
+                    for t in affectedTorrents {
                         verifyTorrent(torrent: t, config: info.config, auth: info.auth, onResponse: { response in
-                            // TODO: Handle response
+                            handleTransmissionResponse(response,
+                                onSuccess: {
+                                    // Success - verification started
+                                },
+                                onError: { error in
+                                    errorMessage = error
+                                    showingError = true
+                                }
+                            )
                         })
                     }
                 }) {
@@ -218,14 +240,16 @@ struct macOSTorrentListRow: View {
         .id(torrent.id)
         .sheet(isPresented: $labelDialog) {
             VStack(spacing: 16) {
-                Text("Edit Labels")
+                Text("Edit Labels\(affectedTorrents.count > 1 ? " (\(affectedTorrents.count) torrents)" : "")")
                     .font(.headline)
                 
                 LabelEditView(
                     labelInput: $labelInput,
-                    existingLabels: torrent.labels,
+                    // Show existing labels for single torrent, empty for multi-torrent (append mode)
+                    existingLabels: affectedTorrents.count == 1 ? Array(affectedTorrents.first!.labels) : [],
                     store: store,
-                    torrentId: torrent.id,
+                    torrentIds: Array(affectedTorrents.map { $0.id }),
+                    selectedTorrents: affectedTorrents,
                     shouldSave: $shouldSave
                 )
                 
@@ -246,13 +270,21 @@ struct macOSTorrentListRow: View {
             .frame(width: 400)
         }
         .alert(
-            "Delete \(torrentsToDelete.count > 1 ? "\(torrentsToDelete.count) Torrents" : "Torrent")",
+            "Delete \(affectedTorrents.count > 1 ? "\(affectedTorrents.count) Torrents" : "Torrent")",
             isPresented: $deleteDialog) {
                 Button(role: .destructive) {
                     let info = makeConfig(store: store)
-                    for t in torrentsToDelete {
+                    for t in affectedTorrents {
                         deleteTorrent(torrent: t, erase: true, config: info.config, auth: info.auth, onDel: { response in
-                            // TODO: Handle response
+                            handleTransmissionResponse(response,
+                                onSuccess: {
+                                    // Success - torrent deleted
+                                },
+                                onError: { error in
+                                    errorMessage = error
+                                    showingError = true
+                                }
+                            )
                         })
                     }
                     deleteDialog.toggle()
@@ -261,9 +293,17 @@ struct macOSTorrentListRow: View {
                 }
                 Button("Remove from list only") {
                     let info = makeConfig(store: store)
-                    for t in torrentsToDelete {
+                    for t in affectedTorrents {
                         deleteTorrent(torrent: t, erase: false, config: info.config, auth: info.auth, onDel: { response in
-                            // TODO: Handle response
+                            handleTransmissionResponse(response,
+                                onSuccess: {
+                                    // Success - torrent removed from list
+                                },
+                                onError: { error in
+                                    errorMessage = error
+                                    showingError = true
+                                }
+                            )
                         })
                     }
                     deleteDialog.toggle()
@@ -272,9 +312,10 @@ struct macOSTorrentListRow: View {
                 Text("Do you want to delete the file(s) from the disk?")
             }
             .interactiveDismissDisabled(false)
+        .transmissionErrorAlert(isPresented: $showingError, message: errorMessage)
     }
     
-    private var torrentsToDelete: Set<Torrent> {
+    private var affectedTorrents: Set<Torrent> {
         selectedTorrents.contains(torrent) ? selectedTorrents : Set([torrent])
     }
 }
@@ -287,29 +328,51 @@ struct LabelEditView: View {
     @FocusState private var isInputFocused: Bool
     @Environment(\.dismiss) private var dismiss
     var store: Store
-    var torrentId: Int
+    var torrentIds: [Int]
+    let selectedTorrents: Set<Torrent>
     @Binding var shouldSave: Bool
     
-    init(labelInput: Binding<String>, existingLabels: [String], store: Store, torrentId: Int, shouldSave: Binding<Bool>) {
+    init(labelInput: Binding<String>, existingLabels: [String], store: Store, torrentIds: [Int], selectedTorrents: Set<Torrent>, shouldSave: Binding<Bool>) {
         self._labelInput = labelInput
         self.existingLabels = existingLabels
         self._workingLabels = State(initialValue: Set(existingLabels))
         self.store = store
-        self.torrentId = torrentId
+        self.torrentIds = torrentIds
+        self.selectedTorrents = selectedTorrents
         self._shouldSave = shouldSave
     }
     
+    /// Saves labels by merging newly entered labels with each selected torrent's
+    /// existing labels. This appends labels and does not remove or overwrite
+    /// existing labels.
     private func saveAndDismiss() {
         // First add any pending tag
-        addNewTag()
+        if addNewTag(from: &newTagInput, to: &workingLabels) {
+            labelInput = workingLabels.joined(separator: ", ")
+        }
         
         // Update the binding
-        updateLabelInput()
+        labelInput = workingLabels.joined(separator: ", ")
         
-        // Save to server and refresh
-        saveTorrentLabels(torrentId: torrentId, labels: workingLabels, store: store) {
-            dismiss()
+        // Merge new labels with each torrent's existing labels
+        for torrent in selectedTorrents {
+            let existingLabels = Set(torrent.labels)
+            let mergedLabels = existingLabels.union(workingLabels)
+            let sortedLabels = Array(mergedLabels).sorted()
+            
+            let info = makeConfig(store: store)
+            updateTorrent(
+                args: TorrentSetRequestArgs(ids: [torrent.id], labels: sortedLabels),
+                info: info,
+                onComplete: { _ in
+                    // Individual torrent updated
+                }
+            )
         }
+        
+        // Trigger refresh and dismiss
+        refreshTransmissionData(store: store)
+        dismiss()
     }
     
     var body: some View {
@@ -319,7 +382,7 @@ struct LabelEditView: View {
                     ForEach(Array(workingLabels).sorted(), id: \.self) { label in
                         LabelTag(label: label) {
                             workingLabels.remove(label)
-                            updateLabelInput()
+                            labelInput = workingLabels.joined(separator: ", ")
                         }
                     }
                     
@@ -341,7 +404,9 @@ struct LabelEditView: View {
             if newValue.contains(",") {
                 // Remove the comma and add the tag
                 newTagInput = newValue.replacingOccurrences(of: ",", with: "")
-                addNewTag()
+                if addNewTag(from: &newTagInput, to: &workingLabels) {
+                    labelInput = workingLabels.joined(separator: ", ")
+                }
             }
         }
     }
@@ -351,7 +416,11 @@ struct LabelEditView: View {
             .textFieldStyle(.plain)
             .focused($isInputFocused)
             .frame(width: 80)
-            .onSubmit(addNewTag)
+            .onSubmit {
+                if addNewTag(from: &newTagInput, to: &workingLabels) {
+                    labelInput = workingLabels.joined(separator: ", ")
+                }
+            }
             .onTapGesture {
                 isInputFocused = true
             }
@@ -364,18 +433,6 @@ struct LabelEditView: View {
             }
     }
     
-    private func addNewTag() {
-        let trimmed = newTagInput.trimmingCharacters(in: .whitespaces)
-        if BitDream.addNewTag(trimmedInput: trimmed, to: &workingLabels) {
-            updateLabelInput()
-        }
-        newTagInput = ""
-    }
-    
-    private func updateLabelInput() {
-        // Update the binding with the current working set
-        labelInput = workingLabels.joined(separator: ", ")
-    }
 }
 
 #else

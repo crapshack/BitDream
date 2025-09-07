@@ -11,6 +11,8 @@ struct iOSTorrentListRow: View {
     @State var deleteDialog: Bool = false
     @State var labelDialog: Bool = false
     @State var labelInput: String = ""
+    @State private var showingError = false
+    @State private var errorMessage = ""
     @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
@@ -49,7 +51,15 @@ struct iOSTorrentListRow: View {
             Button(action: {
                 let info = makeConfig(store: store)
                 playPauseTorrent(torrent: torrent, config: info.config, auth: info.auth, onResponse: { response in
-                    // TODO: Handle response
+                    handleTransmissionResponse(response,
+                        onSuccess: {
+                            // Success - torrent state will update automatically
+                        },
+                        onError: { error in
+                            errorMessage = error
+                            showingError = true
+                        }
+                    )
                 })
             }) {
                 Label(torrent.status == TorrentStatus.stopped.rawValue ? "Resume" : "Pause", 
@@ -140,7 +150,15 @@ struct iOSTorrentListRow: View {
             Button(action: {
                 let info = makeConfig(store: store)
                 verifyTorrent(torrent: torrent, config: info.config, auth: info.auth, onResponse: { response in
-                    // TODO: Handle response
+                    handleTransmissionResponse(response,
+                        onSuccess: {
+                            // Success - verification started
+                        },
+                        onError: { error in
+                            errorMessage = error
+                            showingError = true
+                        }
+                    )
                 })
             }) {
                 Label("Verify Local Data", systemImage: "checkmark.arrow.trianglehead.counterclockwise")
@@ -162,7 +180,15 @@ struct iOSTorrentListRow: View {
                 Button(role: .destructive) {
                     let info = makeConfig(store: store)
                     deleteTorrent(torrent: torrent, erase: true, config: info.config, auth: info.auth, onDel: { response in
-                        // TODO: Handle response
+                        handleTransmissionResponse(response,
+                            onSuccess: {
+                                // Success - torrent deleted
+                            },
+                            onError: { error in
+                                errorMessage = error
+                                showingError = true
+                            }
+                        )
                     })
                     deleteDialog.toggle()
                 } label: {
@@ -171,7 +197,15 @@ struct iOSTorrentListRow: View {
                 Button("Remove from list only") {
                     let info = makeConfig(store: store)
                     deleteTorrent(torrent: torrent, erase: false, config: info.config, auth: info.auth, onDel: { response in
-                        // TODO: Handle response
+                        handleTransmissionResponse(response,
+                            onSuccess: {
+                                // Success - torrent removed from list
+                            },
+                            onError: { error in
+                                errorMessage = error
+                                showingError = true
+                            }
+                        )
                     })
                     deleteDialog.toggle()
                 }
@@ -179,6 +213,7 @@ struct iOSTorrentListRow: View {
                 Text("Do you want to delete the file(s) from the disk?")
             }
             .interactiveDismissDisabled(false)
+        .transmissionErrorAlert(isPresented: $showingError, message: errorMessage)
         .sheet(isPresented: $labelDialog) {
             NavigationView {
                 iOSLabelEditView(labelInput: $labelInput, existingLabels: torrent.labels, store: store, torrentId: torrent.id)
@@ -205,12 +240,20 @@ struct iOSLabelEditView: View {
         self.torrentId = torrentId
     }
     
+    private var sortedLabels: [String] {
+        Array(workingLabels).sorted { lhs, rhs in
+            lhs.localizedCaseInsensitiveCompare(rhs) == .orderedAscending
+        }
+    }
+    
     private func saveAndDismiss() {
         // First add any pending tag
-        addNewTag()
+        if addNewTag(from: &newTagInput, to: &workingLabels) {
+            labelInput = workingLabels.joined(separator: ", ")
+        }
         
         // Update the binding
-        updateLabelInput()
+        labelInput = workingLabels.joined(separator: ", ")
         
         // Save to server and refresh
         saveTorrentLabels(torrentId: torrentId, labels: workingLabels, store: store) {
@@ -228,10 +271,10 @@ struct iOSLabelEditView: View {
                         .padding(.horizontal)
                     
                     FlowLayout(spacing: 4) {
-                        ForEach(Array(workingLabels).sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }, id: \.self) { label in
+                        ForEach(sortedLabels, id: \.self) { label in
                             LabelTag(label: label) {
                                 workingLabels.remove(label)
-                                updateLabelInput()
+                                labelInput = workingLabels.joined(separator: ", ")
                             }
                         }
                     }
@@ -242,10 +285,18 @@ struct iOSLabelEditView: View {
                             .textFieldStyle(.roundedBorder)
                             .focused($isInputFocused)
                             .submitLabel(.done)
-                            .onSubmit(addNewTag)
+                            .onSubmit {
+                                if addNewTag(from: &newTagInput, to: &workingLabels) {
+                                    labelInput = workingLabels.joined(separator: ", ")
+                                }
+                            }
                         
                         if !newTagInput.isEmpty {
-                            Button(action: addNewTag) {
+                            Button(action: {
+                                if addNewTag(from: &newTagInput, to: &workingLabels) {
+                                    labelInput = workingLabels.joined(separator: ", ")
+                                }
+                            }) {
                                 Image(systemName: "plus.circle.fill")
                                     .foregroundColor(.accentColor)
                             }
@@ -279,23 +330,13 @@ struct iOSLabelEditView: View {
             if newValue.contains(",") {
                 // Remove the comma and add the tag
                 newTagInput = newValue.replacingOccurrences(of: ",", with: "")
-                addNewTag()
+                if addNewTag(from: &newTagInput, to: &workingLabels) {
+                    labelInput = workingLabels.joined(separator: ", ")
+                }
             }
         }
     }
     
-    private func addNewTag() {
-        let trimmed = newTagInput.trimmingCharacters(in: .whitespaces)
-        if BitDream.addNewTag(trimmedInput: trimmed, to: &workingLabels) {
-            updateLabelInput()
-        }
-        newTagInput = ""
-    }
-    
-    private func updateLabelInput() {
-        // Update the binding with the current working set
-        labelInput = workingLabels.joined(separator: ", ")
-    }
 }
 
 #else
