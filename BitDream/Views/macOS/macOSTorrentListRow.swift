@@ -144,7 +144,8 @@ struct macOSTorrentListRow: View {
             }
 
             Button(action: {
-                labelInput = torrent.labels.joined(separator: ", ")
+                // For additive mode, start with empty input
+                labelInput = ""
                 labelDialog.toggle()
             }) {
                 HStack {
@@ -218,14 +219,15 @@ struct macOSTorrentListRow: View {
         .id(torrent.id)
         .sheet(isPresented: $labelDialog) {
             VStack(spacing: 16) {
-                Text("Edit Labels")
+                Text("Edit Labels\(torrentsToAct.count > 1 ? " (\(torrentsToAct.count) torrents)" : "")")
                     .font(.headline)
                 
                 LabelEditView(
                     labelInput: $labelInput,
-                    existingLabels: torrent.labels,
+                    existingLabels: [],
                     store: store,
-                    torrentId: torrent.id,
+                    torrentIds: Array(torrentsToAct.map { $0.id }),
+                    selectedTorrents: torrentsToAct,
                     shouldSave: $shouldSave
                 )
                 
@@ -277,6 +279,10 @@ struct macOSTorrentListRow: View {
     private var torrentsToDelete: Set<Torrent> {
         selectedTorrents.contains(torrent) ? selectedTorrents : Set([torrent])
     }
+    
+    private var torrentsToAct: Set<Torrent> {
+        selectedTorrents.contains(torrent) ? selectedTorrents : Set([torrent])
+    }
 }
 
 struct LabelEditView: View {
@@ -287,15 +293,17 @@ struct LabelEditView: View {
     @FocusState private var isInputFocused: Bool
     @Environment(\.dismiss) private var dismiss
     var store: Store
-    var torrentId: Int
+    var torrentIds: [Int]
+    let selectedTorrents: Set<Torrent>
     @Binding var shouldSave: Bool
     
-    init(labelInput: Binding<String>, existingLabels: [String], store: Store, torrentId: Int, shouldSave: Binding<Bool>) {
+    init(labelInput: Binding<String>, existingLabels: [String], store: Store, torrentIds: [Int], selectedTorrents: Set<Torrent>, shouldSave: Binding<Bool>) {
         self._labelInput = labelInput
         self.existingLabels = existingLabels
         self._workingLabels = State(initialValue: Set(existingLabels))
         self.store = store
-        self.torrentId = torrentId
+        self.torrentIds = torrentIds
+        self.selectedTorrents = selectedTorrents
         self._shouldSave = shouldSave
     }
     
@@ -306,10 +314,25 @@ struct LabelEditView: View {
         // Update the binding
         updateLabelInput()
         
-        // Save to server and refresh
-        saveTorrentLabels(torrentId: torrentId, labels: workingLabels, store: store) {
-            dismiss()
+        // For additive mode: merge new labels with each torrent's existing labels
+        for torrent in selectedTorrents {
+            let existingLabels = Set(torrent.labels)
+            let mergedLabels = existingLabels.union(workingLabels)
+            let sortedLabels = Array(mergedLabels).sorted()
+            
+            let info = makeConfig(store: store)
+            updateTorrent(
+                args: TorrentSetRequestArgs(ids: [torrent.id], labels: sortedLabels),
+                info: info,
+                onComplete: { _ in
+                    // Individual torrent updated
+                }
+            )
         }
+        
+        // Trigger refresh and dismiss
+        refreshTransmissionData(store: store)
+        dismiss()
     }
     
     var body: some View {
