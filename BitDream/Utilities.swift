@@ -81,8 +81,9 @@ extension Sequence {
 
 public enum SortProperty: String, CaseIterable {
     case name = "Name"
-    case dateAdded = "Date Added"
+    case size = "Size"
     case status = "Status"
+    case dateAdded = "Date Added"
     case eta = "Remaining Time"
 }
 
@@ -113,6 +114,8 @@ func sortTorrents(_ torrents: [Torrent], by property: SortProperty, order: SortO
             }
             return ascending ? (a.eta < b.eta) : (a.eta > b.eta)
         }
+    case .size:
+        return order == .ascending ? sortedList.sortedAscending(using: .keyPath(\.sizeWhenDone)) : sortedList.sortedDescending(using: .keyPath(\.sizeWhenDone))
     }
 }
 
