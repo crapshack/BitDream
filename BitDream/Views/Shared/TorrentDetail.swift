@@ -92,20 +92,31 @@ struct TorrentDetailHeaderView: View {
     var torrent: Torrent
     
     var body: some View {
-        VStack {
-            Divider()
-            HStack {
-                HStack(spacing: 2) {
-                    Image(systemName: "arrow.down")
-                    Text("\(byteCountFormatter.string(fromByteCount: torrent.rateDownload))/s")
-                }
-                HStack(spacing: 2) {
-                    Image(systemName: "arrow.up")
-                    Text("\(byteCountFormatter.string(fromByteCount: torrent.rateUpload))/s")
-                }
+        HStack {
+            Spacer()
+            
+            HStack(spacing: 8) {
+                RatioChip(
+                    ratio: torrent.uploadRatio,
+                    size: .compact
+                )
+                
+                SpeedChip(
+                    speed: torrent.rateDownload,
+                    direction: .download,
+                    style: .chip,
+                    size: .compact
+                )
+                
+                SpeedChip(
+                    speed: torrent.rateUpload,
+                    direction: .upload,
+                    style: .chip,
+                    size: .compact
+                )
             }
-            .foregroundColor(.secondary)
-            .font(.subheadline)
+            
+            Spacer()
         }
     }
 }

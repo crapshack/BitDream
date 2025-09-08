@@ -25,20 +25,8 @@ struct macOSTorrentDetail: View {
         
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                // Header with transfer rates
-                HStack(spacing: 12) {
-                    HStack(spacing: 2) {
-                        Image(systemName: "arrow.down")
-                        Text("\(byteCountFormatter.string(fromByteCount: torrent.rateDownload))/s")
-                    }
-                    HStack(spacing: 2) {
-                        Image(systemName: "arrow.up")
-                        Text("\(byteCountFormatter.string(fromByteCount: torrent.rateUpload))/s")
-                    }
-                    Spacer()
-                }
-                .font(.system(size: 13))
-                .padding(.bottom, 4)
+                TorrentDetailHeaderView(torrent: torrent)
+                    .padding(.bottom, 4)
                 
                 // General section
                 GroupBox {

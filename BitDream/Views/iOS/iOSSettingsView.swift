@@ -20,6 +20,18 @@ struct iOSSettingsView: View {
                         }
                     }
                     
+                    NavigationLink(destination: AccentColorPicker(selection: $themeManager.currentAccentColorOption)) {
+                        HStack {
+                            Text("Accent Color")
+                            Spacer()
+                            Circle()
+                                .fill(themeManager.currentAccentColorOption.color)
+                                .frame(width: 16, height: 16)
+                            Text(themeManager.currentAccentColorOption.name)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    
                     Toggle("Show file type icons", isOn: $showContentTypeIcons)
                 }
                 
@@ -33,6 +45,21 @@ struct iOSSettingsView: View {
                         }
                     }
                     .pickerStyle(.navigationLink)
+                }
+                
+                Section(header: Text("Reset")) {
+                    Button(action: {
+                        // Reset accent color to default
+                        themeManager.setAccentColor(.blue)
+                        // Reset theme to system
+                        themeManager.setThemeMode(.system)
+                        // Reset other settings
+                        showContentTypeIcons = true
+                        store.updatePollInterval(5.0) // Default poll interval
+                    }) {
+                        Text("Reset All Settings")
+                            .foregroundColor(.accentColor)
+                    }
                 }
                 
                 Section(header: Text("About")) {
@@ -53,6 +80,45 @@ struct iOSSettingsView: View {
                 }
             }
         }
+    }
+}
+
+struct AccentColorPicker: View {
+    @Binding var selection: AccentColorOption
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        List {
+            ForEach(AccentColorOption.allCases) { option in
+                HStack {
+                    Circle()
+                        .fill(option.color)
+                        .frame(width: 20, height: 20)
+                    
+                    Text(option.name)
+                    
+                    Text(option.rawValue)
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundColor(.secondary)
+                    
+                    Spacer()
+                    
+                    if selection == option {
+                        Image(systemName: "checkmark")
+                            .foregroundColor(.accentColor)
+                    }
+                }
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    withAnimation(.easeInOut(duration: 0.1)) {
+                        selection = option
+                        ThemeManager.shared.setAccentColor(option)
+                    }
+                }
+            }
+        }
+        .navigationTitle("Accent Color")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 

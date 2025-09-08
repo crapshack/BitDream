@@ -149,61 +149,27 @@ struct StatsHeaderView: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            // Ratio chip with progress ring
-            HStack(spacing: 4) {
-                ZStack {
-                    Circle()
-                        .stroke(Color.gray.opacity(0.3), lineWidth: 2)
-                        .frame(width: 16, height: 16)
-                    
-                    Circle()
-                        .trim(from: 0, to: min(calculateTotalRatio(store: store), 1.0))
-                        .stroke(calculateTotalRatio(store: store) >= 1.0 ? .green : .orange, lineWidth: 2)
-                        .frame(width: 16, height: 16)
-                        .rotationEffect(.degrees(-90))
-                }
-                Text(String(format: "%.2f", calculateTotalRatio(store: store)))
-                    .monospacedDigit()
-            }
-            .font(.system(.caption, design: .monospaced))
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(Color.gray.opacity(0.1))
-            .clipShape(Capsule())
-            .help("Upload ratio")
+            RatioChip(
+                ratio: calculateTotalRatio(store: store),
+                size: .compact
+            )
             
             Spacer()
             
             HStack(spacing: 8) {
-                // Download speed chip
-                HStack(spacing: 4) {
-                    Image(systemName: "arrow.down")
-                        .imageScale(.small)
-                        .foregroundColor(.blue)
-                    Text("\(byteCountFormatter.string(fromByteCount: store.sessionStats?.downloadSpeed ?? 0))/s")
-                        .monospacedDigit()
-                }
-                .font(.system(.caption, design: .monospaced))
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(Color.gray.opacity(0.1))
-                .clipShape(Capsule())
-                .help("Download speed")
+                SpeedChip(
+                    speed: store.sessionStats?.downloadSpeed ?? 0,
+                    direction: .download,
+                    style: .chip,
+                    size: .compact
+                )
                 
-                // Upload speed chip
-                HStack(spacing: 4) {
-                    Image(systemName: "arrow.up")
-                        .imageScale(.small)
-                        .foregroundColor(.green)
-                    Text("\(byteCountFormatter.string(fromByteCount: store.sessionStats?.uploadSpeed ?? 0))/s")
-                        .monospacedDigit()
-                }
-                .font(.system(.caption, design: .monospaced))
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(Color.gray.opacity(0.1))
-                .clipShape(Capsule())
-                .help("Upload speed")
+                SpeedChip(
+                    speed: store.sessionStats?.uploadSpeed ?? 0,
+                    direction: .upload,
+                    style: .chip,
+                    size: .compact
+                )
             }
         }
         .padding(.horizontal)
