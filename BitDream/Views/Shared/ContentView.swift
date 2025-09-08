@@ -146,13 +146,63 @@ func setupHost(hosts: FetchedResults<Host>, store: Store) {
 struct StatsHeaderView: View {
     @ObservedObject var store: Store
     @ObservedObject private var themeManager = ThemeManager.shared
+    @AppStorage(UserDefaultsKeys.ratioDisplayMode) private var ratioDisplayModeRaw: String = AppDefaults.ratioDisplayMode.rawValue
     
+    // MARK: - Computed totals and ratio
+    private var ratioDisplayMode: RatioDisplayMode {
+        RatioDisplayMode(rawValue: ratioDisplayModeRaw) ?? AppDefaults.ratioDisplayMode
+    }
+
+    private var overallTotals: (uploaded: Int64, downloaded: Int64) {
+        switch ratioDisplayMode {
+        case .cumulative:
+            if let s = store.sessionStats?.cumulativeStats {
+                return (uploaded: s.uploadedBytes, downloaded: s.downloadedBytes)
+            }
+        case .current:
+            if let s = store.sessionStats?.currentStats {
+                return (uploaded: s.uploadedBytes, downloaded: s.downloadedBytes)
+            }
+        }
+        let fallbackDownloaded = store.torrents.reduce(0) { $0 + $1.downloadedEver }
+        let fallbackUploaded = store.torrents.reduce(0) { $0 + $1.uploadedEver }
+        return (uploaded: fallbackUploaded, downloaded: fallbackDownloaded)
+    }
+    
+    private var overallRatio: Double {
+        let totals = overallTotals
+        return totals.downloaded > 0 ? Double(totals.uploaded) / Double(totals.downloaded) : 0.0
+    }
+    
+    private var ratioTooltip: String {
+        let totals = overallTotals
+        let mode = ratioDisplayMode == .cumulative ? "Total Ratio" : "Session Ratio"
+        let uploaded = byteCountFormatter.string(fromByteCount: totals.uploaded)
+        let downloaded = byteCountFormatter.string(fromByteCount: totals.downloaded)
+        return "\(mode)\n----------\nUploaded: \(uploaded)\nDownloaded: \(downloaded)"
+    }
+
     var body: some View {
         HStack(spacing: 12) {
             RatioChip(
-                ratio: calculateTotalRatio(store: store),
-                size: .compact
+                ratio: overallRatio,
+                size: .compact,
+                helpText: ratioTooltip
             )
+            .contextMenu {
+                Button(action: { ratioDisplayModeRaw = RatioDisplayMode.cumulative.rawValue }) {
+                    HStack {
+                        if ratioDisplayMode == .cumulative { Image(systemName: "checkmark") }
+                        Text("Total Ratio")
+                    }
+                }
+                Button(action: { ratioDisplayModeRaw = RatioDisplayMode.current.rawValue }) {
+                    HStack {
+                        if ratioDisplayMode == .current { Image(systemName: "checkmark") }
+                        Text("Session Ratio")
+                    }
+                }
+            }
             
             Spacer()
             
@@ -263,7 +313,7 @@ func getCompletedTorrentsCount(in store: Store) -> Int {
 
 // Helper function to calculate total ratio across all torrents
 func calculateTotalRatio(store: Store) -> Double {
-    let totalDownloaded = store.torrents.reduce(0) { $0 + $1.downloadedCalc }
+    let totalDownloaded = store.torrents.reduce(0) { $0 + $1.downloadedEver }
     let totalUploaded = store.torrents.reduce(0) { $0 + $1.uploadedEver }
     
     guard totalDownloaded > 0 else { return 0.0 }

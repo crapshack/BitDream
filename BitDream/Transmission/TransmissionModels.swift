@@ -111,6 +111,7 @@ public struct Torrent: Codable, Hashable, Identifiable {
     let totalSize: Int64
     let uploadRatio: Double
     let uploadedEver: Int64
+    let downloadedEver: Int64
     var downloadedCalc: Int64 { haveUnchecked + haveValid}
     var statusCalc: TorrentStatusCalc {
         if status == TorrentStatus.stopped.rawValue && percentDone == 1 {
@@ -174,6 +175,7 @@ public struct Torrent: Codable, Hashable, Identifiable {
         case totalSize
         case uploadRatio
         case uploadedEver
+        case downloadedEver
     }
 }
 
@@ -197,6 +199,26 @@ public struct SessionStats: Codable, Hashable {
     let pausedTorrentCount: Int
     let torrentCount: Int
     let uploadSpeed: Int64
+    let cumulativeStats: TransmissionCumulativeStats?
+    let currentStats: TransmissionCumulativeStats?
+    
+    enum CodingKeys: String, CodingKey {
+        case activeTorrentCount
+        case downloadSpeed
+        case pausedTorrentCount
+        case torrentCount
+        case uploadSpeed
+        case cumulativeStats = "cumulative-stats"
+        case currentStats = "current-stats"
+    }
+}
+
+public struct TransmissionCumulativeStats: Codable, Hashable {
+    let downloadedBytes: Int64
+    let filesAdded: Int64
+    let secondsActive: Int64
+    let sessionCount: Int64
+    let uploadedBytes: Int64
 }
 
 // MARK: - Request Argument Models

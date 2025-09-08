@@ -105,6 +105,7 @@ struct SpeedChip: View {
 struct RatioChip: View {
     let ratio: Double
     var size: SpeedChipSize = .compact
+    var helpText: String? = nil
     
     private var progressRingSize: CGFloat {
         switch size {
@@ -135,7 +136,7 @@ struct RatioChip: View {
         .padding(.vertical, size.verticalPadding)
         .background(Color.gray.opacity(0.1))
         .clipShape(Capsule())
-        .help("Upload ratio")
+        .help(helpText ?? "Upload ratio")
     }
 }
 
