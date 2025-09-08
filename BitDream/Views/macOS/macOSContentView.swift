@@ -47,58 +47,6 @@ struct macOSContentView: View {
     // Drag and drop state
     @State private var isDropTargeted = false
     @State private var draggedTorrentInfo: [TorrentInfo] = []
-    @State private var isParsingTorrents = false
-    
-    
-    // Handle torrent file drops
-    private func handleTorrentFileDrop(providers: [NSItemProvider]) -> Bool {
-        // Extract filenames for preview and determine if we accept
-        var torrentFiles: [String] = []
-        var accepted = false
-        
-        for provider in providers {
-            if provider.canLoadObject(ofClass: URL.self) || provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
-                // Try to get filename for preview
-                if let suggestedName = provider.suggestedName,
-                   suggestedName.lowercased().hasSuffix(".torrent") {
-                    torrentFiles.append(suggestedName)
-                    accepted = true
-                }
-                
-                // Load asynchronously for actual processing
-                if provider.canLoadObject(ofClass: URL.self) {
-                    _ = provider.loadObject(ofClass: URL.self) { url, error in
-                        guard let url = url, url.pathExtension.lowercased() == "torrent" else { return }
-                        DispatchQueue.global(qos: .userInitiated).async {
-                            var didAccess = false
-                            if url.isFileURL {
-                                didAccess = url.startAccessingSecurityScopedResource()
-                            }
-                            defer {
-                                if didAccess { url.stopAccessingSecurityScopedResource() }
-                            }
-                            do {
-                                let data = try Data(contentsOf: url)
-                                DispatchQueue.main.async {
-                                    addTorrentFromFileData(data, store: store)
-                                }
-                            } catch {
-                                print("Failed to read dropped torrent file: \(error)")
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        
-        // Update preview files if we found any
-        if !torrentFiles.isEmpty {
-            // This function is no longer used with the new delegate approach
-            // but keeping for compatibility
-        }
-        
-        return accepted
-    }
     
     // Torrent Preview Card Component
     private var torrentPreviewCard: some View {
@@ -497,6 +445,7 @@ struct macOSContentView: View {
                     }) {
                         Label("Add Torrent", systemImage: "plus")
                     }
+                    .buttonStyle(.borderless)
                     .help("Add a new torrent")
                 }
                 
@@ -542,6 +491,7 @@ struct macOSContentView: View {
                             systemImage: isCompactMode ? "rectangle.grid.1x2" : "list.bullet"
                         )
                     }
+                    .buttonStyle(.borderless)
                     .help(isCompactMode ? "Expanded view" : "Compact view")
                 }
                 
@@ -555,6 +505,7 @@ struct macOSContentView: View {
                     }) {
                         Label("Inspector", systemImage: "sidebar.right")
                     }
+                    .buttonStyle(.borderless)
                     .help(isInspectorVisible ? "Hide inspector" : "Show inspector")
                 }
             }

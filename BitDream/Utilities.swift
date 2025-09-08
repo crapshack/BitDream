@@ -405,11 +405,19 @@ private func fastReadDecimalNumber(_ bytes: UnsafeBufferPointer<UInt8>, startInd
     guard idx < upperBound else { return nil }
     var value = 0
     var sawDigit = false
+    // Cap extremely large declared lengths to avoid pathological allocations
+    let maxAllowed = 100_000_000 // 100 MB
     while idx < upperBound {
         let b = bytes[idx]
         if b >= UInt8(ascii: "0") && b <= UInt8(ascii: "9") {
             sawDigit = true
-            value = value &* 10 &+ Int(b &- UInt8(ascii: "0"))
+            let digit = Int(b &- UInt8(ascii: "0"))
+            let (mul, mulOverflow) = value.multipliedReportingOverflow(by: 10)
+            if mulOverflow { return nil }
+            let (add, addOverflow) = mul.addingReportingOverflow(digit)
+            if addOverflow { return nil }
+            if add > maxAllowed { return nil }
+            value = add
             idx &+= 1
         } else {
             break
@@ -481,7 +489,10 @@ private func fastSkipBencodeValue(_ bytes: UnsafeBufferPointer<UInt8>, startInde
 private func fastKeyEquals(_ bytes: UnsafeBufferPointer<UInt8>, start: Int, length: Int, ascii key: StaticString) -> Bool {
     // Compare raw bytes to ASCII StaticString without optional binding
     let keyLen = key.utf8CodeUnitCount
-    guard length == keyLen else { return false }
+    // Ensure the slice [start, start + keyLen) is within bounds and matches expected length
+    guard length == keyLen,
+          start >= 0,
+          keyLen <= bytes.count - start else { return false }
     // Access the raw pointer to the StaticString's UTF8 storage
     return key.withUTF8Buffer { keyBuf -> Bool in
         var i = 0
