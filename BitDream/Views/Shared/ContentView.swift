@@ -264,9 +264,7 @@ func getCompletedTorrentsCount(in store: Store) -> Int {
 // Helper function to calculate total ratio across all torrents
 func calculateTotalRatio(store: Store) -> Double {
     let totalDownloaded = store.torrents.reduce(0) { $0 + $1.downloadedCalc }
-    let totalUploaded = store.torrents.reduce(0) { sum, torrent in
-        sum + Int64(Double(torrent.downloadedCalc) * torrent.uploadRatio)
-    }
+    let totalUploaded = store.torrents.reduce(0) { $0 + $1.uploadedEver }
     
     guard totalDownloaded > 0 else { return 0.0 }
     return Double(totalUploaded) / Double(totalDownloaded)

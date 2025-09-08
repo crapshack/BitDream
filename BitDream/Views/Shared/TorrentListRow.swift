@@ -265,7 +265,7 @@ func validateNewName(_ name: String, current: String) -> String? {
     if trimmed.isEmpty {
         return "Name cannot be empty."
     }
-    if trimmed.contains("/") || trimmed.contains(":") { // avoid path separators and macOS illegal colon
+    if trimmed.contains("/") || trimmed.contains(":") { // avoid path separators and colon (often illegal)
         return "Name cannot contain path separators."
     }
     if trimmed.rangeOfCharacter(from: .controlCharacters) != nil {
