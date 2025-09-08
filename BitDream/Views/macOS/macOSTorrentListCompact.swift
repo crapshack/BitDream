@@ -137,6 +137,10 @@ struct macOSTorrentListCompact: View {
         }
     }
     
+    private var sortedRows: [TorrentTableRow] {
+        rows.sorted(using: sortOrder)
+    }
+    
     private var selectedTorrents: Binding<Set<Torrent>> {
         Binding<Set<Torrent>>(
             get: {
@@ -151,7 +155,7 @@ struct macOSTorrentListCompact: View {
     }
     
     var body: some View {
-        Table(rows, selection: $selection, sortOrder: $sortOrder) {
+        Table(sortedRows, selection: $selection, sortOrder: $sortOrder) {
             // Status icon column
             if isColumnVisible(.statusIcon) {
                 TableColumn("") { row in
@@ -294,6 +298,7 @@ struct macOSTorrentListCompact: View {
             }
         }
         .tableStyle(.inset(alternatesRowBackgrounds: true))
+        .animation(.default, value: sortOrder)
         .contextMenu(forSelectionType: TorrentTableRow.ID.self) { selection in
             torrentContextMenu(for: selection)
         }
