@@ -49,12 +49,7 @@ struct macOSTorrentDetail: View {
                         DetailRow(label: "Name", value: torrent.name)
                         
                         DetailRow(label: "Status") {
-                            HStack {
-                                Circle()
-                                    .fill(statusColor(for: torrent))
-                                    .frame(width: 8, height: 8)
-                                Text(torrent.statusCalc.rawValue)
-                            }
+                            TorrentStatusBadge(torrent: torrent)
                         }
                         
                         DetailRow(label: "Date Added", value: details.addedDate)
@@ -86,9 +81,11 @@ struct macOSTorrentDetail: View {
                         // Native macOS section header
                         macOSSectionHeader("Stats", icon: "chart.bar")
                         
-                        DetailRow(label: "Downloaded", value: details.downloadedFormatted)
                         DetailRow(label: "Size When Done", value: details.sizeWhenDoneFormatted)
                         DetailRow(label: "Progress", value: details.percentComplete)
+                        DetailRow(label: "Downloaded", value: details.downloadedFormatted)
+                        DetailRow(label: "Uploaded", value: details.uploadedFormatted)
+                        DetailRow(label: "Upload Ratio", value: details.uploadRatio)
                     }
                     .padding(.vertical, 16)
                     .padding(.horizontal, 20)
