@@ -445,7 +445,6 @@ struct macOSContentView: View {
                     }) {
                         Label("Add Torrent", systemImage: "plus")
                     }
-                    .buttonStyle(.borderless)
                     .help("Add a new torrent")
                 }
                 
@@ -491,7 +490,6 @@ struct macOSContentView: View {
                             systemImage: isCompactMode ? "rectangle.grid.1x2" : "list.bullet"
                         )
                     }
-                    .buttonStyle(.borderless)
                     .help(isCompactMode ? "Expanded view" : "Compact view")
                 }
                 
@@ -505,7 +503,6 @@ struct macOSContentView: View {
                     }) {
                         Label("Inspector", systemImage: "sidebar.right")
                     }
-                    .buttonStyle(.borderless)
                     .help(isInspectorVisible ? "Hide inspector" : "Show inspector")
                 }
             }
