@@ -54,35 +54,13 @@ func symbolForPath(_ pathOrName: String) -> String {
     return ContentTypeIconMapper.symbolForFile(pathOrName)
 }
 
-// MARK: - File Type Categories
+// MARK: - File Type Category Helper
 
-enum FileTypeCategory: String, CaseIterable {
-    case video = "Videos"
-    case audio = "Audio"
-    case image = "Images"
-    case document = "Documents"
-    case archive = "Archives"
-    case other = "Other"
-}
-
-extension FileTypeCategory {
-    var title: String { rawValue }
-}
-
-/// Get file type category from filename (now uses shared ContentTypeIconMapper)
-func fileTypeCategory(_ pathOrName: String) -> FileTypeCategory {
+/// Get file type category from filename using shared ContentTypeIconMapper
+/// Executables are treated as "Other" for file context filters
+func fileTypeCategory(_ pathOrName: String) -> ContentTypeCategory {
     let category = ContentTypeIconMapper.categoryForFile(pathOrName)
-    
-    // Map the shared category to the local FileTypeCategory enum
-    switch category {
-    case .video: return .video
-    case .audio: return .audio
-    case .image: return .image
-    case .document: return .document
-    case .archive: return .archive
-    case .executable: return .other  // Map executable to other for file context
-    case .other: return .other
-    }
+    return category == .executable ? .other : category
 }
 
 // MARK: - Shared File Utilities
