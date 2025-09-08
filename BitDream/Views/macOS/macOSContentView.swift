@@ -65,24 +65,22 @@ struct macOSContentView: View {
         
         let iconName = "document.badge.plus"
         
-        return VStack(spacing: 8) {
-            VStack(alignment: .leading, spacing: 2) {
-                HStack {
-                    Image(systemName: iconName)
-                        .foregroundColor(.secondary)
-                        .font(.caption)
-                    Text(displayTitle)
-                        .font(.title2)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.primary)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                }
+        return HStack(spacing: 16) {
+            // Large icon spanning both rows
+            Image(systemName: iconName)
+                .foregroundColor(.secondary)
+                .font(.system(size: 40))
+                .frame(width: 50, height: 50)
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(displayTitle)
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+                    .lineLimit(2)
+                    .truncationMode(.middle)
                 
-                HStack {
-                    Image(systemName: iconName)
-                        .foregroundColor(.clear)
-                        .font(.caption)
+                HStack(spacing: 8) {
                     Text(formattedTotalSize)
                         .font(.system(.subheadline, design: .monospaced))
                         .foregroundColor(.secondary)
@@ -94,14 +92,16 @@ struct macOSContentView: View {
                         .foregroundColor(.secondary)
                 }
             }
+            
+            Spacer()
         }
-        .padding(12)
+        .padding(20)
         .background(
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: 12)
                 .fill(.ultraThickMaterial)
                 .shadow(color: .black.opacity(0.3), radius: 12, x: 0, y: 6)
         )
-        .frame(maxWidth: 300)
+        .frame(maxWidth: 400, minHeight: 80)
     }
     
     // Helper function to extract label query from "label:something" syntax
