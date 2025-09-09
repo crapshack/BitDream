@@ -285,7 +285,20 @@ struct ViewCommands: Commands {
     }
 }
 
- 
+#if os(macOS)
+// App Commands for About and app-related actions
+struct AppCommands: Commands {
+    @Environment(\.openWindow) private var openWindow
+    
+    var body: some Commands {
+        CommandGroup(replacing: .appInfo) {
+            Button("About BitDream") {
+                openWindow(id: "about")
+            }
+        }
+    }
+}
+#endif
 
 @main
 struct BitDreamApp: App {
@@ -431,6 +444,7 @@ struct BitDreamApp: App {
         }
         .windowResizability(.contentSize)
         .commands {
+            AppCommands()
             CommandGroup(replacing: .newItem) { }
             FileCommands(store: store)
             SearchCommands(store: store)
@@ -476,6 +490,17 @@ struct BitDreamApp: App {
                 .frame(minWidth: 420, idealWidth: 460, maxWidth: 600, minHeight: 320, idealHeight: 360, maxHeight: 800)
         }
         .windowResizability(.contentSize)
+        
+        // About window
+        Window("About BitDream", id: "about") {
+            macOSAboutView()
+                .environmentObject(themeManager)
+                .immediateTheme(manager: themeManager)
+                .frame(width: 320, height: 400)
+        }
+        .windowResizability(.contentSize)
+        .defaultPosition(.center)
+        
         #else
         WindowGroup {
             ContentView()
