@@ -285,6 +285,8 @@ struct ViewCommands: Commands {
     }
 }
 
+ 
+
 @main
 struct BitDreamApp: App {
     let persistenceController = PersistenceController.shared
@@ -463,6 +465,17 @@ struct BitDreamApp: App {
                 Divider()
             }
         }
+        // Statistics window
+        Window("Statistics", id: "statistics") {
+            macOSStatisticsView()
+                .environment(\.managedObjectContext, persistenceController.container.viewContext)
+                .environmentObject(store)
+                .accentColor(themeManager.accentColor)
+                .environmentObject(themeManager)
+                .immediateTheme(manager: themeManager)
+                .frame(minWidth: 420, idealWidth: 460, maxWidth: 600, minHeight: 320, idealHeight: 360, maxHeight: 800)
+        }
+        .windowResizability(.contentSize)
         #else
         WindowGroup {
             ContentView()
