@@ -69,9 +69,11 @@ func addTorrentAction(
 
 // MARK: - Extensions
 extension UTType {
-    /// Convenience UTType for .torrent used by file importer; falls back to .data
+    /// Convenience UTType for .torrent used by file importer; prefers extension, then MIME type, then .data
     static var torrent: UTType {
-        UTType(filenameExtension: "torrent") ?? .data
+        UTType(filenameExtension: "torrent")
+        ?? UTType(mimeType: "application/x-bittorrent")
+        ?? .data
     }
 }
 
