@@ -658,9 +658,9 @@ struct TorrentDropDelegate: DropDelegate {
         
         // Count expected torrents first
         let providers = info.itemProviders(for: [.fileURL])
-        let expectedCount = providers.count
         var parsedInfos: [TorrentInfo] = []
         let group = DispatchGroup()
+        let resultsLock = NSLock()
         
         for provider in providers {
             if provider.canLoadObject(ofClass: URL.self) {
@@ -678,7 +678,9 @@ struct TorrentDropDelegate: DropDelegate {
                         
                         let data = try Data(contentsOf: url)
                         if let torrentInfo = parseTorrentInfo(from: data) {
+                            resultsLock.lock()
                             parsedInfos.append(torrentInfo)
+                            resultsLock.unlock()
                         }
                     } catch {
                         print("Failed to parse torrent during drag: \(error)")
