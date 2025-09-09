@@ -58,7 +58,7 @@ struct macOSStatisticsView: View {
                         if let current = stats.currentStats {
                             keyValueRow("Downloaded", byteCountFormatter.string(fromByteCount: current.downloadedBytes))
                             keyValueRow("Uploaded", byteCountFormatter.string(fromByteCount: current.uploadedBytes))
-                            keyValueRow("Ratio", String(format: "%.2f", current.downloadedBytes > 0 ? Double(current.uploadedBytes) / Double(current.downloadedBytes) : 0.0))
+                            keyValueRow("Upload Ratio", String(format: "%.2f", current.downloadedBytes > 0 ? Double(current.uploadedBytes) / Double(current.downloadedBytes) : 0.0))
                             keyValueRow("Files Added", current.filesAdded.formatted())
                             keyValueRow("Active Time", formatDuration(current.secondsActive))
                         } else {
@@ -70,7 +70,7 @@ struct macOSStatisticsView: View {
                         if let cumul = stats.cumulativeStats {
                             keyValueRow("Downloaded", byteCountFormatter.string(fromByteCount: cumul.downloadedBytes))
                             keyValueRow("Uploaded", byteCountFormatter.string(fromByteCount: cumul.uploadedBytes))
-                            keyValueRow("Ratio", String(format: "%.2f", cumul.downloadedBytes > 0 ? Double(cumul.uploadedBytes) / Double(cumul.downloadedBytes) : 0.0))
+                            keyValueRow("Upload Ratio", String(format: "%.2f", cumul.downloadedBytes > 0 ? Double(cumul.uploadedBytes) / Double(cumul.downloadedBytes) : 0.0))
                             keyValueRow("Files Added", cumul.filesAdded.formatted())
                             keyValueRow("Active Time", formatDuration(cumul.secondsActive))
                             keyValueRow("Session Count", String(cumul.sessionCount))
