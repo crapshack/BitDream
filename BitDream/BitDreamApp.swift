@@ -96,7 +96,7 @@ struct TorrentCommands: Commands {
             Divider()
             
             // Remove action
-            Button("Remove...") {
+            Button("Remove…") {
                 store.showingMenuRemoveConfirmation = true
             }
             .keyboardShortcut(.delete, modifiers: .command)

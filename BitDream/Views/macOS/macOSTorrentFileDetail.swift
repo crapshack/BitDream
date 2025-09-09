@@ -328,7 +328,7 @@ struct HeaderView: View {
             HStack {
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(.secondary)
-                TextField("Search files...", text: $viewModel.searchText)
+                TextField("Search files…", text: $viewModel.searchText)
                     .textFieldStyle(.roundedBorder)
             }
             .padding(.horizontal, 8)

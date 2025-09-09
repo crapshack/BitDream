@@ -43,7 +43,8 @@ func addTorrentAction(
     downloadDir: String,
     store: Store,
     errorMessage: Binding<String?>,
-    showingError: Binding<Bool>
+    showingError: Binding<Bool>,
+    onSuccess: (() -> Void)? = nil
 ) {
     // Only proceed if we have a magnet link
     guard !alertInput.isEmpty else { return }
@@ -59,7 +60,9 @@ func addTorrentAction(
         onAdd: { response in
             // Ensure UI updates happen on the main thread
             DispatchQueue.main.async {
-                if response.response != TransmissionResponse.success {
+                if response.response == TransmissionResponse.success {
+                    onSuccess?()
+                } else {
                     handleAddTorrentError("Failed to add torrent: \(response.response)", errorMessage: errorMessage, showingError: showingError)
                 }
             }

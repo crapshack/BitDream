@@ -74,7 +74,8 @@ struct macOSAddTorrent: View {
                             downloadDir: downloadDir,
                             store: store,
                             errorMessage: $errorMessage,
-                            showingError: $showingError
+                            showingError: $showingError,
+                            onSuccess: { dismiss() }
                         )
                     } else if inputMethod == .torrentFile && !selectedTorrentFiles.isEmpty {
                         // Add each selected torrent file
@@ -245,6 +246,17 @@ struct macOSAddTorrent: View {
                         TextField("magnet:?xt=urn:btih:...", text: $alertInput)
                             .textFieldStyle(.roundedBorder)
                             .frame(height: 30)
+                            .onSubmit {
+                                guard !alertInput.isEmpty else { return }
+                                addTorrentAction(
+                                    alertInput: alertInput,
+                                    downloadDir: downloadDir,
+                                    store: store,
+                                    errorMessage: $errorMessage,
+                                    showingError: $showingError,
+                                    onSuccess: { dismiss() }
+                                )
+                            }
                     }
                     .frame(height: 80) // Fixed height for both sections
                 } else {
@@ -266,7 +278,7 @@ struct macOSAddTorrent: View {
                             
                             Spacer()
                             
-                            Button("Choose Files...") {
+                            Button("Choose Files…") {
                                 activeImporter = .torrentFiles
                                 isShowingImporter = true
                             }
