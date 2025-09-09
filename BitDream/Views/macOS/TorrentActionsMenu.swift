@@ -155,8 +155,6 @@ struct TorrentActionsToolbarMenu: View {
     }
 }
 
-#warning("Shared presenters added below: LabelEditSheetContent, RenameSheetContent, and torrentDeleteAlert")
-
 // MARK: - Shared Presenters for Sheets/Alerts
 
 struct LabelEditSheetContent: View {

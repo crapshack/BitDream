@@ -69,16 +69,9 @@ func addTorrentAction(
 
 // MARK: - Extensions
 extension UTType {
-    /// This is needed to silence buildtime warnings related to the filepicker.
-    /// `.allowedFileTypes` was deprecated in favor of this approach.
+    /// Convenience UTType for .torrent used by file importer; falls back to .data
     static var torrent: UTType {
-        if let known = UTType(filenameExtension: "torrent") {
-            return known
-        }
-        if let fromTag = UTType(tag: "torrent", tagClass: .filenameExtension, conformingTo: nil) {
-            return fromTag
-        }
-        return .data
+        UTType(filenameExtension: "torrent") ?? .data
     }
 }
 
