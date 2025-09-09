@@ -101,12 +101,7 @@ func createTorrentContextMenu(
     // Pause Button (always shown; disabled for single stopped)
     Button(action: {
         let info = makeConfig(store: store)
-        performTransmissionStatusRequest(
-            method: "torrent-stop",
-            args: ["ids": Array(torrents.map { $0.id })] as [String: [Int]],
-            config: info.config,
-            auth: info.auth
-        ) { response in
+        pauseTorrents(ids: Array(torrents.map { $0.id }), info: info) { response in
             handleTransmissionResponse(response,
                 onSuccess: {},
                 onError: { error in
@@ -127,12 +122,7 @@ func createTorrentContextMenu(
     // Resume Button (always shown; disabled for single non-stopped)
     Button(action: {
         let info = makeConfig(store: store)
-        performTransmissionStatusRequest(
-            method: "torrent-start",
-            args: ["ids": Array(torrents.map { $0.id })] as [String: [Int]],
-            config: info.config,
-            auth: info.auth
-        ) { response in
+        resumeTorrents(ids: Array(torrents.map { $0.id }), info: info) { response in
             handleTransmissionResponse(response,
                 onSuccess: {},
                 onError: { error in

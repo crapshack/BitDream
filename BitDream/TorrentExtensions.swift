@@ -20,15 +20,3 @@ extension Collection where Element == Torrent {
         return isEmpty || (count == 1 && first?.status != TorrentStatus.stopped.rawValue)
     }
 }
-
-extension Set where Element == Torrent {
-    /// Whether pause action should be disabled (includes empty check)
-    var shouldDisablePauseAction: Bool {
-        return shouldDisablePause
-    }
-    
-    /// Whether resume actions should be disabled (includes empty check)
-    var shouldDisableResumeAction: Bool {
-        return shouldDisableResume
-    }
-}

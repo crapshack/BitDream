@@ -80,18 +80,18 @@ struct TorrentCommands: Commands {
                 pauseSelectedTorrents()
             }
             .keyboardShortcut(".", modifiers: .command)
-            .disabled(store.selectedTorrents.shouldDisablePauseAction)
+            .disabled(store.selectedTorrents.shouldDisablePause)
             
             Button("Resume Selected") {
                 resumeSelectedTorrents()
             }
             .keyboardShortcut("/", modifiers: .command)
-            .disabled(store.selectedTorrents.shouldDisableResumeAction)
+            .disabled(store.selectedTorrents.shouldDisableResume)
             
             Button("Resume Selected Now") {
                 resumeSelectedTorrentsNow()
             }
-            .disabled(store.selectedTorrents.shouldDisableResumeAction)
+            .disabled(store.selectedTorrents.shouldDisableResume)
             
             Divider()
             
@@ -119,6 +119,12 @@ struct TorrentCommands: Commands {
             
             Divider()
             
+            // Ask for more peers action
+            Button("Ask For More Peers") {
+                reannounceSelectedTorrents()
+            }
+            .disabled(store.selectedTorrents.isEmpty)
+            
             // Verify action
             Button("Verify Local Data") {
                 verifySelectedTorrents()
@@ -135,13 +141,8 @@ struct TorrentCommands: Commands {
         
         let info = makeConfig(store: store)
         let ids = selected.map { $0.id }
-        
-        performTransmissionStatusRequest(
-            method: "torrent-stop",
-            args: ["ids": ids] as [String: [Int]],
-            config: info.config,
-            auth: info.auth
-        ) { response in
+
+        pauseTorrents(ids: ids, info: info) { response in
             handleTransmissionResponse(response,
                 onSuccess: {},
                 onError: { error in
@@ -161,13 +162,8 @@ struct TorrentCommands: Commands {
         
         let info = makeConfig(store: store)
         let ids = selected.map { $0.id }
-        
-        performTransmissionStatusRequest(
-            method: "torrent-start",
-            args: ["ids": ids] as [String: [Int]],
-            config: info.config,
-            auth: info.auth
-        ) { response in
+
+        resumeTorrents(ids: ids, info: info) { response in
             handleTransmissionResponse(response,
                 onSuccess: {},
                 onError: { error in
@@ -184,26 +180,20 @@ struct TorrentCommands: Commands {
     private func resumeSelectedTorrentsNow() {
         let selected = Array(store.selectedTorrents)
         guard !selected.isEmpty else { return }
-        
-        let info = makeConfig(store: store)
-        let ids = selected.map { $0.id }
-        
-        performTransmissionStatusRequest(
-            method: "torrent-start-now",
-            args: ["ids": ids] as [String: [Int]],
-            config: info.config,
-            auth: info.auth
-        ) { response in
-            handleTransmissionResponse(response,
-                onSuccess: {},
-                onError: { error in
-                    DispatchQueue.main.async {
-                        store.debugBrief = "Failed to resume torrents now"
-                        store.debugMessage = error
-                        store.isError = true
+
+        for torrent in selected {
+            resumeTorrentNow(torrent: torrent, store: store) { response in
+                handleTransmissionResponse(response,
+                    onSuccess: {},
+                    onError: { error in
+                        DispatchQueue.main.async {
+                            store.debugBrief = "Failed to resume torrents now"
+                            store.debugMessage = error
+                            store.isError = true
+                        }
                     }
-                }
-            )
+                )
+            }
         }
     }
     
@@ -242,6 +232,26 @@ struct TorrentCommands: Commands {
                     }
                 }
             )
+        }
+    }
+    
+    private func reannounceSelectedTorrents() {
+        let selected = Array(store.selectedTorrents)
+        guard !selected.isEmpty else { return }
+        
+        for torrent in selected {
+            reAnnounceToTrackers(torrent: torrent, store: store) { response in
+                handleTransmissionResponse(response,
+                    onSuccess: {},
+                    onError: { error in
+                        DispatchQueue.main.async {
+                            store.debugBrief = "Failed to ask for more peers"
+                            store.debugMessage = error
+                            store.isError = true
+                        }
+                    }
+                )
+            }
         }
     }
     
