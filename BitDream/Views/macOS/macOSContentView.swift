@@ -445,7 +445,6 @@ struct macOSContentView: View {
                     store.isShowingAddAlert.toggle()
                 }) {
                     Label("Add Torrent", systemImage: "plus")
-                        .foregroundColor(.primary)
                 }
                 .help("Add torrent")
             }
@@ -461,7 +460,6 @@ struct macOSContentView: View {
                         isCompactMode ? "Expanded View" : "Compact View",
                         systemImage: isCompactMode ? "rectangle.grid.1x2" : "list.bullet"
                     )
-                    .foregroundColor(.primary)
                 }
                 .help(isCompactMode ? "Expanded view" : "Compact view")
             }
@@ -475,7 +473,6 @@ struct macOSContentView: View {
                     }
                 }) {
                     Label("Inspector", systemImage: "sidebar.right")
-                        .foregroundColor(.primary)
                 }
                 .help(isInspectorVisible ? "Hide inspector" : "Show inspector")
             }

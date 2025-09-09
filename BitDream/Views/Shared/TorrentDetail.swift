@@ -127,6 +127,14 @@ struct TorrentDetailToolbar: ToolbarContent {
     var store: Store
     
     var body: some ToolbarContent {
+        #if os(macOS)
+        ToolbarItem {
+            TorrentActionsToolbarMenu(
+                store: store,
+                selectedTorrents: store.selectedTorrents
+            )
+        }
+        #else
         ToolbarItem {
             Menu {
                 Button(action: {
@@ -140,6 +148,7 @@ struct TorrentDetailToolbar: ToolbarContent {
                 Image(systemName: "ellipsis.circle")
             }
         }
+        #endif
     }
 }
 

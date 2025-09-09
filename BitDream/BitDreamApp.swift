@@ -181,7 +181,6 @@ struct TorrentCommands: Commands {
         }
     }
     
-    
     private func pauseAllTorrents() {
         guard !store.torrents.isEmpty else { return }
         
@@ -323,10 +322,10 @@ struct BitDreamApp: App {
             FileCommands(store: store)
             SearchCommands(store: store)
             ViewCommands()
-            #if os(macOS)
             TorrentCommands(store: store)
-            #endif
-            CommandGroup(after: .sidebar) {
+            SidebarCommands()
+            CommandGroup(before: .sidebar) {
+                Divider()
                 Menu("Appearance") {
                     Picker("Appearance", selection: $themeManager.themeMode) {
                         Text("System").tag(ThemeMode.system)
@@ -350,6 +349,7 @@ struct BitDreamApp: App {
                     }
                     .keyboardShortcut("j", modifiers: .command)
                 }
+                Divider()
             }
         }
         #else
