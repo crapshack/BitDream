@@ -423,7 +423,7 @@ struct macOSContentView: View {
                     Label("Add Torrent", systemImage: "plus")
                         .foregroundColor(.primary)
                 }
-                .help("Add a new torrent")
+                .help("Add torrent")
             }
             
             // Toggle compact mode button

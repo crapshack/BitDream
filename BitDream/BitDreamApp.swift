@@ -28,6 +28,20 @@ struct SearchCommands: Commands {
     }
 }
 
+// File Commands for file-related actions
+struct FileCommands: Commands {
+    @ObservedObject var store: Store
+    
+    var body: some Commands {
+        CommandGroup(after: .newItem) {
+            Button("Add Torrent…") {
+                store.isShowingAddAlert.toggle()
+            }
+            .keyboardShortcut("o", modifiers: .command)
+        }
+    }
+}
+
 // View Commands for view-related toggles
 struct ViewCommands: Commands {
     @AppStorage("torrentListCompactMode") private var isCompactMode: Bool = false
@@ -104,6 +118,7 @@ struct BitDreamApp: App {
         .windowResizability(.contentSize)
         .commands {
             CommandGroup(replacing: .newItem) { }
+            FileCommands(store: store)
             SearchCommands(store: store)
             ViewCommands()
             CommandGroup(after: .sidebar) {
