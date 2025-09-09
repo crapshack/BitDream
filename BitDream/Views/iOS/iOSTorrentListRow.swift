@@ -110,13 +110,13 @@ struct iOSTorrentListRow: View {
             renameInput = torrent.name
             renameDialog = true
         }) {
-            Label("Rename...", systemImage: "pencil")
+            Label("Rename…", systemImage: "pencil")
         }
 
         Button(action: {
             labelDialog.toggle()
         }) {
-            Label("Edit Labels...", systemImage: "tag")
+            Label("Edit Labels…", systemImage: "tag")
         }
         
         Divider()
@@ -181,12 +181,11 @@ struct iOSTorrentListRow: View {
                      Text(torrent.name)
                         .lineLimit(1)
                         .truncationMode(.tail)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .layoutPriority(1)
                     
-                    // Use shared label tags view
-                    createLabelTagsView(for: torrent)
-                        .layoutPriority(-1)  // Give lower priority than the name
-                }
+                     // Use shared label tags view
+                     createLabelTagsView(for: torrent)
+                 }
                 
                 createStatusView(for: torrent)
                     .font(.custom("sub", size: 10))

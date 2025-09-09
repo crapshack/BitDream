@@ -4,7 +4,7 @@
   <img src="BitDream/Assets.xcassets/AppIcon.appiconset/mac512.png" width="128" height="128" alt="BitDream Icon">
 </p>
 
-BitDream is a remote control client for Transmission web server, built with SwiftUI and featuring native iOS and macOS apps. It provides a modern, seamless interface to manage your Transmission server remotely.
+BitDream is a native and feature-rich remote control client for Transmission web server. It provides a modern, seamless interface to manage your Transmission server from anywhere.
 
 ## Features
 

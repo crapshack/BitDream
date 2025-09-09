@@ -362,6 +362,36 @@ public func playPauseAllTorrents(start: Bool, info: (config: TransmissionConfig,
     )
 }
 
+/// Pause multiple torrents by IDs
+public func pauseTorrents(
+    ids: [Int],
+    info: (config: TransmissionConfig, auth: TransmissionAuth),
+    onResponse: @escaping (TransmissionResponse) -> Void
+) {
+    performTransmissionStatusRequest(
+        method: "torrent-stop",
+        args: ["ids": ids] as [String: [Int]],
+        config: info.config,
+        auth: info.auth,
+        completion: onResponse
+    )
+}
+
+/// Resume multiple torrents by IDs
+public func resumeTorrents(
+    ids: [Int],
+    info: (config: TransmissionConfig, auth: TransmissionAuth),
+    onResponse: @escaping (TransmissionResponse) -> Void
+) {
+    performTransmissionStatusRequest(
+        method: "torrent-start",
+        args: ["ids": ids] as [String: [Int]],
+        config: info.config,
+        auth: info.auth,
+        completion: onResponse
+    )
+}
+
 public func verifyTorrent(torrent: Torrent, config: TransmissionConfig, auth: TransmissionAuth, onResponse: @escaping (TransmissionResponse) -> Void) {
     executeTorrentAction(actionMethod: "torrent-verify", torrentId: torrent.id, config: config, auth: auth, onResponse: onResponse)
 }

@@ -9,6 +9,13 @@ import SwiftUI
 import Foundation
 import KeychainAccess
 
+#if os(macOS)
+enum AddTorrentInitialMode {
+    case magnet
+    case file
+}
+#endif
+
 struct Server {
     var config: TransmissionConfig
     var auth: TransmissionAuth
@@ -44,6 +51,35 @@ class Store: NSObject, ObservableObject {
     @Published var isEditingServerSettings: Bool = false  // Flag to pause reconnection attempts
     
     @Published var pollInterval: Double = AppDefaults.pollInterval // Default poll interval in seconds
+    @Published var shouldActivateSearch: Bool = false
+    
+    // Selection state for menu commands (macOS only)
+    @Published var selectedTorrentIds: Set<Int> = []
+    
+#if os(macOS)
+    // Controls how the Add Torrent flow should start when invoked from menu
+    @Published var addTorrentInitialMode: AddTorrentInitialMode? = nil
+    // Triggers a global file importer from top-level window
+    @Published var presentGlobalTorrentFileImporter: Bool = false
+    // Global native alert state for macOS
+    @Published var showGlobalAlert: Bool = false
+    @Published var globalAlertTitle: String = "Error"
+    @Published var globalAlertMessage: String = ""
+    // Global rename dialog state for menu command
+    @Published var showGlobalRenameDialog: Bool = false
+    @Published var globalRenameInput: String = ""
+    @Published var globalRenameTargetId: Int? = nil
+#endif
+    
+    // Computed property to get selected torrents
+    var selectedTorrents: Set<Torrent> {
+        Set(selectedTorrentIds.compactMap { id in
+            torrents.first { $0.id == id }
+        })
+    }
+    
+    // Confirmation dialog state for menu remove command
+    @Published var showingMenuRemoveConfirmation = false
     
     var timer: Timer = Timer()
     

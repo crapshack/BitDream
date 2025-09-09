@@ -156,11 +156,11 @@ func updateList(store: Store, update: @escaping ([Torrent]) -> Void, retry: Int 
     let info = makeConfig(store: store)
     getTorrents(config: info.config, auth: info.auth, onReceived: { torrents, err in
         if (err != nil) {
-            print("Connection error...")
+            print("Connection error…")
             store.handleConnectionError(message: err!)
         } else if (torrents == nil) {
             if (retry > 3) {
-                print("Connection error after retries...")
+                print("Connection error after retries…")
                 store.handleConnectionError(message: "Could not reach server after multiple attempts. Please check your connection.")
             } else {
                 updateList(store: store, update: update, retry: retry + 1)
@@ -195,11 +195,11 @@ func updateSessionStats(store: Store, update: @escaping (SessionStats) -> Void, 
     let info = makeConfig(store: store)
     getSessionStats(config: info.config, auth: info.auth, onReceived: { sessions, err in
         if (err != nil) {
-            print("Connection error...")
+            print("Connection error…")
             store.handleConnectionError(message: err!)
         } else if (sessions == nil) {
             if (retry > 3) {
-                print("Connection error after retries...")
+                print("Connection error after retries…")
                 store.handleConnectionError(message: "Could not reach server after multiple attempts. Please check your connection.")
             } else {
                 updateSessionStats(store: store, update: update, retry: retry + 1)

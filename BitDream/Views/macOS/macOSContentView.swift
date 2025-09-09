@@ -16,18 +16,14 @@ struct macOSContentView: View {
     // Add ThemeManager to access accent color
     @ObservedObject private var themeManager = ThemeManager.shared
     
-    @State private var selectedTorrentIds: Set<Int> = []
-    
-    // Computed property to get the selected torrents from the IDs
+    // Computed property to get the selected torrents from the Store
     private var torrentSelection: Binding<Set<Torrent>> {
         Binding<Set<Torrent>>(
             get: {
-                Set(selectedTorrentIds.compactMap { id in
-                    store.torrents.first { $0.id == id }
-                })
+                store.selectedTorrents
             },
             set: { newSelection in
-                selectedTorrentIds = Set(newSelection.map { $0.id })
+                store.selectedTorrentIds = Set(newSelection.map { $0.id })
             }
         )
     }
@@ -41,11 +37,14 @@ struct macOSContentView: View {
     @State private var searchText: String = ""
     @State private var includedLabels: Set<String> = []
     @State private var excludedLabels: Set<String> = []
-    @State private var isCompactMode: Bool = UserDefaults.standard.torrentListCompactMode
+    @AppStorage("torrentListCompactMode") private var isCompactMode: Bool = false
     @AppStorage("showContentTypeIcons") private var showContentTypeIcons: Bool = true
     
     enum FocusTarget: Hashable { case contentList }
     @FocusState private var focusedTarget: FocusTarget?
+    
+    // Search activation state - using isPresented for searchable
+    @State private var isSearchPresented: Bool = false
     
     // Drag and drop state
     @State private var isDropTargeted = false
@@ -187,6 +186,34 @@ struct macOSContentView: View {
         updateMacOSAppBadge(count: completedTorrentsCount)
     }
     
+    // Remove selected torrents from menu command
+    private func removeSelectedTorrentsFromMenu(deleteData: Bool) {
+        let selected = Array(store.selectedTorrents)
+        guard !selected.isEmpty else { return }
+        
+        let info = makeConfig(store: store)
+        
+        for torrent in selected {
+            deleteTorrent(torrent: torrent, erase: deleteData, config: info.config, auth: info.auth) { response in
+                handleTransmissionResponse(response,
+                    onSuccess: {},
+                    onError: { error in
+                        DispatchQueue.main.async {
+                            store.debugBrief = "Failed to remove torrent"
+                            store.debugMessage = error
+                            store.isError = true
+                        }
+                    }
+                )
+            }
+        }
+        
+        // Clear selection after removal
+        DispatchQueue.main.async {
+            store.selectedTorrentIds.removeAll()
+        }
+    }
+    
     // Computed property for navigation subtitle
     private var navigationSubtitle: String {
         let count = torrentCount(for: sidebarSelection)
@@ -201,13 +228,19 @@ struct macOSContentView: View {
         return subtitle
     }
     
-    var body: some View {       
+    // Base view with basic modifiers
+    private var baseView: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
             sidebarView
         } detail: {
             detailView
         }
         .defaultFocus($focusedTarget, .contentList)
+    }
+    
+    // View with just sheet modifiers
+    private var viewWithSheets: some View {
+        baseView
         .sheet(isPresented: $store.setup) {
             ServerDetail(store: store, viewContext: viewContext, hosts: hosts, isAddNew: true)
         }
@@ -221,6 +254,11 @@ struct macOSContentView: View {
             ErrorDialog(store: store)
                 .frame(width: 400, height: 400)
         }
+    }
+    
+    // View with basic event handlers
+    private var viewWithHandlers: some View {
+        viewWithSheets
         .onChange(of: sidebarSelection) { oldValue, newValue in
             // Update the filter
             filterBySelection = newValue.filter
@@ -247,72 +285,11 @@ struct macOSContentView: View {
             setupHost(hosts: hosts, store: store)
             updateAppBadge()
         }
-        .onChange(of: columnVisibility) { oldValue, newValue in
-            UserDefaults.standard.sidebarVisibility = newValue
-            focusedTarget = .contentList
-        }
-        .onChange(of: isInspectorVisible) { oldValue, newValue in
-            UserDefaults.standard.inspectorVisibility = newValue
-            focusedTarget = .contentList
-        }
-        .onChange(of: sortProperty) { oldValue, newValue in
-            UserDefaults.standard.sortProperty = newValue
-        }
-        .onChange(of: sortOrder) { oldValue, newValue in
-            UserDefaults.standard.sortOrder = newValue
-        }
-        .onChange(of: searchText) { oldValue, newValue in
-            // Check if user typed label: syntax and auto-select matching labels
-            if newValue.lowercased().hasPrefix("label:") {
-                let labelQuery = extractLabelQuery(from: newValue)
-                
-                // Clear any previous auto-selections that don't match exactly anymore
-                let currentExactMatches = Set(store.availableLabels.filter { label in
-                    !labelQuery.isEmpty && label.lowercased() == labelQuery.lowercased()
-                })
-                
-                // Remove any included labels that are no longer exact matches
-                includedLabels = includedLabels.intersection(currentExactMatches)
-                
-                if !labelQuery.isEmpty {
-                    // Only auto-select if there's an exact match
-                    let exactMatch = store.availableLabels.first { label in
-                        label.lowercased() == labelQuery.lowercased()
-                    }
-                    
-                    // Auto-include only exact matches
-                    if let exactLabel = exactMatch {
-                        if !includedLabels.contains(exactLabel) {
-                            includedLabels.insert(exactLabel)
-                            excludedLabels.remove(exactLabel)
-                        }
-                    }
-                }
-            } else {
-                // If not using label: syntax, clear any auto-selections
-                // (Keep only manually selected ones - but we don't track that, so clear all for now)
-                if oldValue.lowercased().hasPrefix("label:") && !newValue.lowercased().hasPrefix("label:") {
-                    includedLabels.removeAll()
-                    excludedLabels.removeAll()
-                }
-            }
-            
-            // Only clear selection if the selected torrent isn't in the new filtered list
-            if let selectedTorrent = torrentSelection.wrappedValue.first {
-                // Check if the selected torrent matches the search filter
-                let matchesSearch = torrentMatchesSearch(selectedTorrent, query: searchText)
-                
-                // Check if the selected torrent matches the category filter
-                let filteredTorrents = store.torrents.filtered(by: filterBySelection)
-                let isSelectedTorrentInFilteredList = filteredTorrents.contains { $0.id == selectedTorrent.id }
-                
-                if !matchesSearch || !isSelectedTorrentInFilteredList {
-                    // Selected torrent is not in the new filtered list, clear selection
-                    torrentSelection.wrappedValue.removeAll()
-                }
-            }
-        }
-        .searchable(text: $searchText, placement: .toolbar, prompt: "Search torrents") {
+    }
+    
+    // Search suggestions extracted to reduce type-check complexity
+    private var searchSuggestions: some View {
+        Group {
             if !store.availableLabels.isEmpty {
                 Section("Filter by Labels") {
                     ForEach(store.availableLabels, id: \.self) { label in
@@ -354,53 +331,122 @@ struct macOSContentView: View {
                 }
             }
         }
-        .toolbar {              
+    }
+    
+    // Sort menu content extracted to reduce type-check complexity
+    private var sortMenuContent: some View {
+        Group {
+            ForEach(SortProperty.allCases, id: \.self) { property in
+                let isSelected = Binding<Bool>(
+                    get: { sortProperty == property },
+                    set: { if $0 { sortProperty = property } }
+                )
+                Toggle(isOn: isSelected) {
+                    Text(property.rawValue)
+                }
+            }
+            
+            Divider()
+            
+            let isAscending = Binding<Bool>(
+                get: { sortOrder == .ascending },
+                set: { if $0 { sortOrder = .ascending } }
+            )
+            Toggle(isOn: isAscending) {
+                Text("Ascending")
+            }
+            
+            let isDescending = Binding<Bool>(
+                get: { sortOrder == .descending },
+                set: { if $0 { sortOrder = .descending } }
+            )
+            Toggle(isOn: isDescending) {
+                Text("Descending")
+            }
+        }
+    }
+    
+    // Extracted to simplify onChange(of: searchText)
+    private func handleSearchTextChange(oldValue: String, newValue: String) {
+        if newValue.lowercased().hasPrefix("label:") {
+            let labelQuery = extractLabelQuery(from: newValue)
+            let currentExactMatches = Set(store.availableLabels.filter { label in
+                !labelQuery.isEmpty && label.lowercased() == labelQuery.lowercased()
+            })
+            includedLabels = includedLabels.intersection(currentExactMatches)
+            if !labelQuery.isEmpty {
+                let exactMatch = store.availableLabels.first { label in
+                    label.lowercased() == labelQuery.lowercased()
+                }
+                if let exactLabel = exactMatch {
+                    if !includedLabels.contains(exactLabel) {
+                        includedLabels.insert(exactLabel)
+                        excludedLabels.remove(exactLabel)
+                    }
+                }
+            }
+        } else {
+            if oldValue.lowercased().hasPrefix("label:") && !newValue.lowercased().hasPrefix("label:") {
+                includedLabels.removeAll()
+                excludedLabels.removeAll()
+            }
+        }
+        if let selectedTorrent = torrentSelection.wrappedValue.first {
+            let matchesSearch = torrentMatchesSearch(selectedTorrent, query: searchText)
+            let filteredTorrents = store.torrents.filtered(by: filterBySelection)
+            let isSelectedTorrentInFilteredList = filteredTorrents.contains { $0.id == selectedTorrent.id }
+            if !matchesSearch || !isSelectedTorrentInFilteredList {
+                torrentSelection.wrappedValue.removeAll()
+            }
+        }
+    }
+
+    // Enhanced view (state changes + search + toolbar)
+    private var enhancedView: some View {
+        viewWithHandlers
+        .onChange(of: columnVisibility) { oldValue, newValue in
+            UserDefaults.standard.sidebarVisibility = newValue
+            focusedTarget = .contentList
+        }
+        .onChange(of: isInspectorVisible) { oldValue, newValue in
+            UserDefaults.standard.inspectorVisibility = newValue
+            focusedTarget = .contentList
+        }
+        .onChange(of: sortProperty) { oldValue, newValue in
+            UserDefaults.standard.sortProperty = newValue
+        }
+        .onChange(of: sortOrder) { oldValue, newValue in
+            UserDefaults.standard.sortOrder = newValue
+        }
+        .onChange(of: store.shouldActivateSearch) { oldValue, newValue in
+            if newValue {
+                isSearchPresented = true
+                store.shouldActivateSearch = false
+            }
+        }
+        .onChange(of: searchText) { oldValue, newValue in
+            handleSearchTextChange(oldValue: oldValue, newValue: newValue)
+        }
+        .searchable(text: $searchText, isPresented: $isSearchPresented, placement: .toolbar, prompt: "Search torrents")
+        .searchSuggestions { searchSuggestions }
+        .toolbar {
             // Content toolbar items
             ToolbarItem(placement: .automatic) {
                 Menu {
-                    // Sort properties
-                    ForEach(SortProperty.allCases, id: \.self) { property in
-                        let isSelected = Binding<Bool>(
-                            get: { sortProperty == property },
-                            set: { if $0 { sortProperty = property } }
-                        )
-                        Toggle(isOn: isSelected) {
-                            Text(property.rawValue)
-                        }
-                    }
-                    
-                    Divider()
-                    
-                    // Sort order
-                    let isAscending = Binding<Bool>(
-                        get: { sortOrder == .ascending },
-                        set: { if $0 { sortOrder = .ascending } }
-                    )
-                    Toggle(isOn: isAscending) {
-                        Text("Ascending")
-                    }
-                    
-                    let isDescending = Binding<Bool>(
-                        get: { sortOrder == .descending },
-                        set: { if $0 { sortOrder = .descending } }
-                    )
-                    Toggle(isOn: isDescending) {
-                        Text("Descending")
-                    }
+                    sortMenuContent
                 } label: {
                     Label("Sort", systemImage: "arrow.up.arrow.down.circle")
                 }
             }
-
+            
             // Add torrent button
             ToolbarItem(placement: .primaryAction) {
                 Button(action: {
                     store.isShowingAddAlert.toggle()
                 }) {
                     Label("Add Torrent", systemImage: "plus")
-                        .foregroundColor(.primary)
                 }
-                .help("Add a new torrent")
+                .help("Add torrent")
             }
             
             // Toggle compact mode button
@@ -408,14 +454,12 @@ struct macOSContentView: View {
                 Button(action: {
                     withAnimation {
                         isCompactMode.toggle()
-                        UserDefaults.standard.torrentListCompactMode = isCompactMode
                     }
                 }) {
                     Label(
                         isCompactMode ? "Expanded View" : "Compact View",
                         systemImage: isCompactMode ? "rectangle.grid.1x2" : "list.bullet"
                     )
-                    .foregroundColor(.primary)
                 }
                 .help(isCompactMode ? "Expanded view" : "Compact view")
             }
@@ -429,11 +473,19 @@ struct macOSContentView: View {
                     }
                 }) {
                     Label("Inspector", systemImage: "sidebar.right")
-                        .foregroundColor(.primary)
                 }
                 .help(isInspectorVisible ? "Hide inspector" : "Show inspector")
             }
         }
+    }
+
+    // Final view with all remaining modifiers
+    private var finalView: some View {
+        enhancedView
+    }
+    
+    var body: some View {
+        finalView
     }
     
     // MARK: - macOS Views
@@ -453,7 +505,7 @@ struct macOSContentView: View {
                     Button {
                         store.setHost(host: host)
                         // Clear selection when changing host
-                        selectedTorrentIds.removeAll()
+                        store.selectedTorrentIds.removeAll()
                         // Force refresh data when changing host
                         updateList(store: store, update: { _ in })
                     } label: {
@@ -542,7 +594,7 @@ struct macOSContentView: View {
                         // Compact table view
                         macOSTorrentListCompact(
                             torrents: sortedTorrents,
-                            selection: $selectedTorrentIds,
+                            selection: $store.selectedTorrentIds,
                             store: store,
                             showContentTypeIcons: showContentTypeIcons
                         )
@@ -618,6 +670,21 @@ struct macOSContentView: View {
         } message: {
             Text(store.connectionErrorMessage)
         }
+        .alert(
+            "Remove \(store.selectedTorrents.count > 1 ? "\(store.selectedTorrents.count) Torrents" : "Torrent")",
+            isPresented: $store.showingMenuRemoveConfirmation) {
+                Button(role: .destructive) {
+                    removeSelectedTorrentsFromMenu(deleteData: true)
+                } label: {
+                    Text("Delete file(s)")
+                }
+                Button("Remove from list only") {
+                    removeSelectedTorrentsFromMenu(deleteData: false)
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Do you want to delete the file(s) from the disk?")
+            }
         .inspector(isPresented: $isInspectorVisible) {
             macOSDetail
                 .inspectorColumnWidth(min: 350, ideal: 400, max: 500)

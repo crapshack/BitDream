@@ -42,9 +42,11 @@ struct iOSAddTorrent: View {
                                 downloadDir: downloadDir,
                                 store: store,
                                 errorMessage: $errorMessage,
-                                showingError: $showingError
+                                showingError: $showingError,
+                                onSuccess: { dismiss() }
                             )
                         }
+                        .keyboardShortcut(.defaultAction)
                         .disabled(alertInput.isEmpty)
                     }
                 }
@@ -65,6 +67,17 @@ struct iOSAddTorrent: View {
                     .textFieldStyle(.roundedBorder)
                     .autocapitalization(.none)
                     .disableAutocorrection(true)
+                    .submitLabel(.done)
+                    .onSubmit {
+                        addTorrentAction(
+                            alertInput: alertInput,
+                            downloadDir: downloadDir,
+                            store: store,
+                            errorMessage: $errorMessage,
+                            showingError: $showingError,
+                            onSuccess: { dismiss() }
+                        )
+                    }
             }
             
             // Download Location Section
