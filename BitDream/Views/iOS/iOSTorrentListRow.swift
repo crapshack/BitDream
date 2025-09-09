@@ -110,13 +110,13 @@ struct iOSTorrentListRow: View {
             renameInput = torrent.name
             renameDialog = true
         }) {
-            Label("Rename...", systemImage: "pencil")
+            Label("Rename…", systemImage: "pencil")
         }
 
         Button(action: {
             labelDialog.toggle()
         }) {
-            Label("Edit Labels...", systemImage: "tag")
+            Label("Edit Labels…", systemImage: "tag")
         }
         
         Divider()
