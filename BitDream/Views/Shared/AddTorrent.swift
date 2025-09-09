@@ -96,7 +96,15 @@ func addTorrentFromFileData(_ fileData: Data, store: Store) {
         config: info.config,
         onAdd: { response in
             if response.response != TransmissionResponse.success {
-                print("Failed to add torrent: \(response.response)")
+                handleTransmissionResponse(
+                    response.response,
+                    onSuccess: {},
+                    onError: { message in
+                        store.debugBrief = "Failed to add torrent"
+                        store.debugMessage = message
+                        store.isError = true
+                    }
+                )
             }
         }
     )

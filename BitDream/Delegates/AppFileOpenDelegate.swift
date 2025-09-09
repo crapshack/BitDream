@@ -57,6 +57,7 @@ final class AppFileOpenDelegate: NSObject, NSApplicationDelegate, ObservableObje
     private func process(_ urls: [URL], with store: Store) {
         // Process files on background queue to avoid UI blocking
         DispatchQueue.global(qos: .userInitiated).async {
+            var failures: [(filename: String, message: String)] = []
             for url in urls {
                 do {
                     var didAccess = false
@@ -73,7 +74,27 @@ final class AppFileOpenDelegate: NSObject, NSApplicationDelegate, ObservableObje
                         addTorrentFromFileData(data, store: store)
                     }
                 } catch {
-                    print("Failed to read torrent file \(url.lastPathComponent): \(error)")
+                    failures.append((filename: url.lastPathComponent, message: error.localizedDescription))
+                }
+            }
+            
+            // Present a single aggregated error dialog if any files failed
+            if !failures.isEmpty {
+                DispatchQueue.main.async {
+                    let count = failures.count
+                    if count == 1, let first = failures.first {
+                        store.debugBrief = "Failed to open '\(first.filename)'"
+                        store.debugMessage = first.message
+                    } else {
+                        store.debugBrief = "Failed to open \(count) torrent files"
+                        let maxListed = 10
+                        let listed = failures.prefix(maxListed)
+                        let details = listed.map { "- \($0.filename): \($0.message)" }.joined(separator: "\n")
+                        let remainder = count - listed.count
+                        let suffix = remainder > 0 ? "\n...and \(remainder) more" : ""
+                        store.debugMessage = details + suffix
+                    }
+                    store.isError = true
                 }
             }
         }

@@ -265,21 +265,25 @@ func refreshTransmissionData(store: Store) {
 /// - Parameter store: The current `Store` containing session information needed for creating the config.
 /// - Returns a tuple containing the requested `config` and `auth`
 func makeConfig(store: Store) -> (config: TransmissionConfig, auth: TransmissionAuth) {
-    // Send the file to the server
+    // Build config and auth safely without force unwraps
     var config = TransmissionConfig()
-    config.host = store.host?.server
-    config.port = Int(store.host!.port)
-    config.scheme = store.host!.isSSL ? "https" : "http"
-    let keychain = Keychain(service: "crapshack.BitDream")
-    var auth: TransmissionAuth
+    guard let host = store.host else {
+        return (config: config, auth: TransmissionAuth(username: "", password: ""))
+    }
+    config.host = host.server
+    config.port = Int(host.port)
+    config.scheme = host.isSSL ? "https" : "http"
     
-    if let password = keychain[store.host!.name!] {
-        auth = TransmissionAuth(username: store.host!.username!, password: password)
-    }
-    else {
-        auth = TransmissionAuth(username: store.host!.username!, password: "")
-    }
-
+    let keychain = Keychain(service: "crapshack.BitDream")
+    let username = host.username ?? ""
+    let password: String = {
+        if let hostName = host.name, let stored = keychain[hostName] {
+            return stored
+        }
+        return ""
+    }()
+    let auth = TransmissionAuth(username: username, password: password)
+    
     return (config: config, auth: auth)
 }
 
@@ -514,6 +518,7 @@ private func fastParseInfoDictionary(_ bytes: UnsafeBufferPointer<UInt8>, startI
     var totalSize: Int64 = 0
     var fileCount: Int = 0
     var sawFilesList = false
+    var sawNameUTF8 = false
     
     while idx < endIndex, bytes[idx] != UInt8(ascii: "e") {
         // Key
@@ -523,13 +528,14 @@ private func fastParseInfoDictionary(_ bytes: UnsafeBufferPointer<UInt8>, startI
         let keyEnd = keyStart + kLen
         guard keyEnd <= endIndex else { return nil }
         
-        let isNameKey = fastKeyEquals(bytes, start: keyStart, length: kLen, ascii: "name")
+        let isNameUTF8Key = fastKeyEquals(bytes, start: keyStart, length: kLen, ascii: "name.utf-8")
+        let isNameKey = !isNameUTF8Key && fastKeyEquals(bytes, start: keyStart, length: kLen, ascii: "name")
         let isFilesKey = !isNameKey && fastKeyEquals(bytes, start: keyStart, length: kLen, ascii: "files")
         let isLengthKey = (!isNameKey && !isFilesKey) && fastKeyEquals(bytes, start: keyStart, length: kLen, ascii: "length")
         
         idx = keyEnd
         
-        if isNameKey {
+        if isNameUTF8Key || isNameKey {
             // Value must be a string: <len>:<bytes>
             guard let (vLen, afterVLen) = fastReadDecimalNumber(bytes, startIndex: idx, upperBound: endIndex) else { return nil }
             guard afterVLen < endIndex, bytes[afterVLen] == UInt8(ascii: ":") else { return nil }
@@ -540,9 +546,13 @@ private func fastParseInfoDictionary(_ bytes: UnsafeBufferPointer<UInt8>, startI
             guard let base = bytes.baseAddress else { return nil }
             let namePtr = base.advanced(by: valueStart)
             let nameBuffer = UnsafeBufferPointer(start: namePtr, count: vLen)
-            let nameArray = Array(nameBuffer)
-            let nameString = String(bytes: nameArray, encoding: .utf8) ?? String(bytes: nameArray, encoding: .isoLatin1)
-            torrentName = nameString
+            let nameString = String(decoding: nameBuffer, as: UTF8.self)
+            if isNameUTF8Key {
+                torrentName = nameString
+                sawNameUTF8 = true
+            } else if !sawNameUTF8 && torrentName == nil {
+                torrentName = nameString
+            }
             idx = valueEnd
         } else if isFilesKey {
             // files: list of dicts

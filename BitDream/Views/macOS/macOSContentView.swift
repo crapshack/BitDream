@@ -60,17 +60,19 @@ struct macOSContentView: View {
         
         let displayTitle: String = {
             if draggedTorrentInfo.count == 1 {
-                return draggedTorrentInfo.first!.name
+                if let name = draggedTorrentInfo.first?.name, !name.isEmpty {
+                    return name
+                } else {
+                    return "1 Torrent"
+                }
             } else {
                 return "\(draggedTorrentInfo.count) Torrents"
             }
         }()
-        
-        let iconName = "document.badge.plus"
-        
+
         return HStack(spacing: 16) {
             // Large icon spanning both rows
-            Image(systemName: iconName)
+            Image(systemName: "document.badge.plus")
                 .foregroundColor(.secondary)
                 .font(.system(size: 40))
                 .frame(width: 50, height: 50)
@@ -456,7 +458,7 @@ struct macOSContentView: View {
                         updateList(store: store, update: { _ in })
                     } label: {
                         HStack {
-                            Label(host.name!, systemImage: "server.rack")
+                            Label(host.name ?? "Unnamed Server", systemImage: "server.rack")
                             Spacer()
                             if host == store.host {
                                 Image(systemName: "checkmark")
