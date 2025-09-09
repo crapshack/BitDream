@@ -219,7 +219,6 @@ struct macOSContentView: View {
             ErrorDialog(store: store)
                 .frame(width: 400, height: 400)
         }
-        .accentColor(themeManager.accentColor) // Apply accent color to the entire view
         .onChange(of: sidebarSelection) { oldValue, newValue in
             // Update the filter
             filterBySelection = newValue.filter
@@ -397,13 +396,9 @@ struct macOSContentView: View {
                     store.isShowingAddAlert.toggle()
                 }) {
                     Label("Add Torrent", systemImage: "plus")
+                        .foregroundColor(.primary)
                 }
                 .help("Add a new torrent")
-            }
-            
-            // Add spacer between sort and view mode buttons
-            ToolbarItem(placement: .automatic) {
-                Spacer()
             }
             
             // Toggle compact mode button
@@ -418,6 +413,7 @@ struct macOSContentView: View {
                         isCompactMode ? "Expanded View" : "Compact View",
                         systemImage: isCompactMode ? "rectangle.grid.1x2" : "list.bullet"
                     )
+                    .foregroundColor(.primary)
                 }
                 .help(isCompactMode ? "Expanded view" : "Compact view")
             }
@@ -431,6 +427,7 @@ struct macOSContentView: View {
                     }
                 }) {
                     Label("Inspector", systemImage: "sidebar.right")
+                        .foregroundColor(.primary)
                 }
                 .help(isInspectorVisible ? "Hide inspector" : "Show inspector")
             }
