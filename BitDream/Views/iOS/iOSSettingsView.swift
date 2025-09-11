@@ -8,6 +8,12 @@ struct iOSSettingsView: View {
     @ObservedObject var store: Store
     @ObservedObject private var themeManager = ThemeManager.shared
     @AppStorage(UserDefaultsKeys.showContentTypeIcons) private var showContentTypeIcons: Bool = AppDefaults.showContentTypeIcons
+    @AppStorage(UserDefaultsKeys.startupConnectionBehavior) private var startupBehaviorRaw: String = AppDefaults.startupConnectionBehavior.rawValue
+    
+    private var startupBehavior: StartupConnectionBehavior {
+        get { StartupConnectionBehavior(rawValue: startupBehaviorRaw) ?? AppDefaults.startupConnectionBehavior }
+        set { startupBehaviorRaw = newValue.rawValue }
+    }
     
     var body: some View {
         // iOS version with standard styling
@@ -35,6 +41,20 @@ struct iOSSettingsView: View {
                     Toggle("Show file type icons", isOn: $showContentTypeIcons)
                 }
                 
+                Section(header: Text("Startup")) {
+                    NavigationLink(destination: StartupConnectionPicker(selected: Binding<StartupConnectionBehavior>(
+                        get: { StartupConnectionBehavior(rawValue: startupBehaviorRaw) ?? AppDefaults.startupConnectionBehavior },
+                        set: { startupBehaviorRaw = $0.rawValue }
+                    ))) {
+                        HStack {
+                            Text("Startup connection")
+                            Spacer()
+                            Text((StartupConnectionBehavior(rawValue: startupBehaviorRaw) ?? .lastUsed) == .lastUsed ? "Last used server" : "Default server")
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+                
                 Section(header: Text("Refresh Settings")) {
                     Picker("Poll Interval", selection: Binding(
                         get: { self.store.pollInterval },
@@ -54,6 +74,7 @@ struct iOSSettingsView: View {
                         themeManager.setThemeMode(AppDefaults.themeMode)
                         showContentTypeIcons = AppDefaults.showContentTypeIcons
                         store.updatePollInterval(AppDefaults.pollInterval)
+                        startupBehaviorRaw = AppDefaults.startupConnectionBehavior.rawValue
                     }) {
                         Text("Reset All Settings")
                             .foregroundColor(.accentColor)
@@ -78,6 +99,31 @@ struct iOSSettingsView: View {
                 }
             }
         }
+    }
+}
+
+struct StartupConnectionPicker: View {
+    @Binding var selected: StartupConnectionBehavior
+    
+    var body: some View {
+        List {
+            Button(action: { selected = .lastUsed }) {
+                HStack {
+                    Text("Last used server")
+                    Spacer()
+                    if selected == .lastUsed { Image(systemName: "checkmark") }
+                }
+            }
+            Button(action: { selected = .defaultServer }) {
+                HStack {
+                    Text("Default server")
+                    Spacer()
+                    if selected == .defaultServer { Image(systemName: "checkmark") }
+                }
+            }
+        }
+        .navigationTitle("Startup connection")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 

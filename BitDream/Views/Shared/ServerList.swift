@@ -55,13 +55,13 @@ func deleteServer(
             // Set the new server as the current host
             currentStore.host = newServer
             // Save the change to UserDefaults
-            UserDefaults.standard.set(newServer.objectID.uriRepresentation().absoluteString, forKey: "selectedHost")
+            UserDefaults.standard.set(newServer.objectID.uriRepresentation().absoluteString, forKey: UserDefaultsKeys.selectedHost)
         } else {
             // If no other servers, set host to nil
             // Clear the current host
             currentStore.host = nil
             // Remove from UserDefaults
-            UserDefaults.standard.removeObject(forKey: "selectedHost")
+            UserDefaults.standard.removeObject(forKey: UserDefaultsKeys.selectedHost)
             
             // Reset any state that might cause crashes when no server is connected
             currentStore.torrents = []

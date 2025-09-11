@@ -17,8 +17,8 @@ extension UserDefaults {
         static let inspectorVisibility = "inspectorVisibility"
         static let sortProperty = "sortProperty"
         static let sortOrder = "sortOrder"
-        static let torrentListCompactMode = "torrentListCompactMode"
-        static let showContentTypeIcons = "showContentTypeIcons"
+        static let torrentListCompactMode = UserDefaultsKeys.torrentListCompactMode
+        static let showContentTypeIcons = UserDefaultsKeys.showContentTypeIcons
     }
     
     static let viewStateDefaults: [String: Any] = [
@@ -127,35 +127,38 @@ func createTorrentSelectionBinding(selectedId: Binding<Int?>, in store: Store) -
 
 // Helper function to set up the host
 func setupHost(hosts: FetchedResults<Host>, store: Store) {
-    // First, try to restore the last selected server from UserDefaults
-    if let savedHostURI = UserDefaults.standard.string(forKey: "selectedHost"),
-       !savedHostURI.isEmpty,
-       let savedHostURL = URL(string: savedHostURI) {
-        
-        // Find the saved host by matching Core Data object ID
-        if let savedHost = hosts.first(where: { $0.objectID.uriRepresentation() == savedHostURL }) {
+    // Read behavior from UserDefaults (fallback to default)
+    let behaviorRaw = UserDefaults.standard.string(forKey: UserDefaultsKeys.startupConnectionBehavior) ?? AppDefaults.startupConnectionBehavior.rawValue
+    let behavior = StartupConnectionBehavior(rawValue: behaviorRaw) ?? AppDefaults.startupConnectionBehavior
+
+    func connectToDefaultOrFirst() -> Bool {
+        if let defaultHost = hosts.first(where: { $0.isDefault }) {
+            store.setHost(host: defaultHost)
+            return true
+        }
+        if let firstHost = hosts.first {
+            store.setHost(host: firstHost)
+            return true
+        }
+        return false
+    }
+
+    switch behavior {
+    case .lastUsed:
+        if let savedHostURI = UserDefaults.standard.string(forKey: UserDefaultsKeys.selectedHost),
+           !savedHostURI.isEmpty,
+           let savedHostURL = URL(string: savedHostURI),
+           let savedHost = hosts.first(where: { $0.objectID.uriRepresentation() == savedHostURL }) {
             store.setHost(host: savedHost)
             return
-        } else {
-            // Clean up invalid saved selection
-            UserDefaults.standard.removeObject(forKey: "selectedHost")
         }
+        if connectToDefaultOrFirst() { return }
+        store.setup = true
+
+    case .defaultServer:
+        if connectToDefaultOrFirst() { return }
+        store.setup = true
     }
-    
-    // If no valid saved selection, fall back to default server
-    if let defaultHost = hosts.first(where: { $0.isDefault }) {
-        store.setHost(host: defaultHost)
-        return
-    }
-    
-    // If no default server, use the first available server
-    if let firstHost = hosts.first {
-        store.setHost(host: firstHost)
-        return
-    }
-    
-    // If no servers exist, show setup
-    store.setup = true
 }
 
 // MARK: - Shared Views

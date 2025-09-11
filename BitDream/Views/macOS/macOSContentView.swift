@@ -37,8 +37,8 @@ struct macOSContentView: View {
     @State private var searchText: String = ""
     @State private var includedLabels: Set<String> = []
     @State private var excludedLabels: Set<String> = []
-    @AppStorage("torrentListCompactMode") private var isCompactMode: Bool = false
-    @AppStorage("showContentTypeIcons") private var showContentTypeIcons: Bool = true
+    @AppStorage(UserDefaultsKeys.torrentListCompactMode) private var isCompactMode: Bool = false
+    @AppStorage(UserDefaultsKeys.showContentTypeIcons) private var showContentTypeIcons: Bool = true
     
     enum FocusTarget: Hashable { case contentList }
     @FocusState private var focusedTarget: FocusTarget?

@@ -10,6 +10,14 @@ struct macOSSettingsView: View {
     // Use ThemeManager instead of direct AppStorage
     @ObservedObject private var themeManager = ThemeManager.shared
     @AppStorage(UserDefaultsKeys.showContentTypeIcons) private var showContentTypeIcons: Bool = AppDefaults.showContentTypeIcons
+    @AppStorage(UserDefaultsKeys.startupConnectionBehavior) private var startupBehaviorRaw: String = AppDefaults.startupConnectionBehavior.rawValue
+    
+    private var startupBehavior: Binding<StartupConnectionBehavior> {
+        Binding<StartupConnectionBehavior>(
+            get: { StartupConnectionBehavior(rawValue: startupBehaviorRaw) ?? AppDefaults.startupConnectionBehavior },
+            set: { startupBehaviorRaw = $0.rawValue }
+        )
+    }
     
     var body: some View {
         // macOS version adapted for the Settings scene
@@ -93,11 +101,23 @@ struct macOSSettingsView: View {
             
             // Advanced Tab
             VStack(alignment: .leading, spacing: 20) {
-                // Refresh Settings section
-                GroupBox(label: Text("Refresh Settings").font(.headline)) {
+                // Connection Settings section
+                GroupBox(label: Text("Connection Settings").font(.headline)) {
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
-                            Text("Auto-refresh interval:")
+                            Text("Startup connection")
+                            Spacer()
+                            Picker("", selection: startupBehavior) {
+                                Text("Last used server").tag(StartupConnectionBehavior.lastUsed)
+                                Text("Default server").tag(StartupConnectionBehavior.defaultServer)
+                            }
+                            .pickerStyle(.menu)
+                            .frame(width: 160)
+                        }
+                        .help("Choose which server BitDream connects to when it launches.")
+                        
+                        HStack {
+                            Text("Auto-refresh interval")
                             Spacer()
                             Picker("", selection: $store.pollInterval) {
                                 ForEach(SettingsView.pollIntervalOptions, id: \.self) { interval in
@@ -107,7 +127,6 @@ struct macOSSettingsView: View {
                             .pickerStyle(.menu)
                             .frame(width: 120)
                         }
-                        .padding(.top, 4)
                         
                         Text("Current interval: \(SettingsView.formatInterval(store.pollInterval))")
                             .font(.caption)
@@ -119,11 +138,11 @@ struct macOSSettingsView: View {
                 // Notifications section
                 GroupBox(label: Text("Notifications").font(.headline)) {
                     VStack(alignment: .leading, spacing: 12) {
-                        Toggle("Show app badge for completed dreams", isOn: .constant(true))
+                        Toggle("Show app badge for completed torrents", isOn: .constant(true))
                             .disabled(true)
                             .padding(.top, 4)
                         
-                        Toggle("Show notifications for completed dreams", isOn: .constant(true))
+                        Toggle("Show notifications for completed torrents", isOn: .constant(true))
                             .disabled(true)
                             
                         Text("Advanced settings coming soon")
@@ -169,7 +188,7 @@ struct macOSSettingsView: View {
     macOSSettingsView(store: Store())
 }
 #else
-// Empty struct for iOS to reference - this won't be compiled on iOS but provides the type
+// Empty struct for iOS to reference - this won't be compiled on macOS but provides the type
 struct macOSSettingsView: View {
     @ObservedObject var store: Store
     

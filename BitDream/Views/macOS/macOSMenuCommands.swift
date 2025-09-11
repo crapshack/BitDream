@@ -409,8 +409,8 @@ struct TorrentCommands: Commands {
 // View Commands for view-related toggles
 struct ViewCommands: Commands {
     @ObservedObject var store: Store
-    @AppStorage("torrentListCompactMode") private var isCompactMode: Bool = false
-    @AppStorage("showContentTypeIcons") private var showContentTypeIcons: Bool = true
+    @AppStorage(UserDefaultsKeys.torrentListCompactMode) private var isCompactMode: Bool = false
+    @AppStorage(UserDefaultsKeys.showContentTypeIcons) private var showContentTypeIcons: Bool = true
     
     var body: some Commands {
         CommandGroup(after: .toolbar) {
