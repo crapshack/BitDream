@@ -127,10 +127,6 @@ struct macOSSettingsView: View {
                             .pickerStyle(.menu)
                             .frame(width: 120)
                         }
-                        
-                        Text("Current interval: \(SettingsView.formatInterval(store.pollInterval))")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
                     }
                     .padding(10)
                 }
