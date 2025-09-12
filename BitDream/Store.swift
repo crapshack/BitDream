@@ -148,6 +148,10 @@ class Store: NSObject, ObservableObject {
     #endif
     
     public func setHost(host: Host) {
+        // Avoid redundant resets if host is unchanged (prevents list flash)
+        if let current = self.host, current.objectID == host.objectID {
+            return
+        }
         var config = TransmissionConfig()
         config.host = host.server
         config.port = Int(host.port)

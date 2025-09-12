@@ -277,7 +277,9 @@ struct macOSContentView: View {
             updateAppBadge()
         }
         .onAppear {
-            setupHost(hosts: hosts, store: store)
+            if store.host == nil {
+                setupHost(hosts: hosts, store: store)
+            }
             updateAppBadge()
         }
     }
