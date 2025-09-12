@@ -21,12 +21,36 @@ struct SettingsView: View {
         }
     }
     
+    // Shared reset for both platforms
+    static func resetAllSettings(store: Store) {
+        let theme = ThemeManager.shared
+        theme.setAccentColor(AppDefaults.accentColor)
+        theme.setThemeMode(AppDefaults.themeMode)
+        
+        // Persist AppStorage-backed flags
+        UserDefaults.standard.set(AppDefaults.showContentTypeIcons, forKey: UserDefaultsKeys.showContentTypeIcons)
+        UserDefaults.standard.set(AppDefaults.startupConnectionBehavior.rawValue, forKey: UserDefaultsKeys.startupConnectionBehavior)
+        
+        // Poll interval via Store API
+        store.updatePollInterval(AppDefaults.pollInterval)
+    }
+    
     var body: some View {
         #if os(iOS)
         iOSSettingsView(store: store)
         #elseif os(macOS)
         macOSSettingsView(store: store)
         #endif
+    }
+}
+
+// Shared extension for creating a Binding<StartupConnectionBehavior> from a raw String binding
+extension Binding where Value == StartupConnectionBehavior {
+    static func fromRawValue(rawValue: Binding<String>, defaultValue: StartupConnectionBehavior) -> Binding<StartupConnectionBehavior> {
+        Binding<StartupConnectionBehavior>(
+            get: { StartupConnectionBehavior(rawValue: rawValue.wrappedValue) ?? defaultValue },
+            set: { rawValue.wrappedValue = $0.rawValue }
+        )
     }
 }
 

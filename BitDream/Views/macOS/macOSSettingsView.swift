@@ -107,7 +107,7 @@ struct macOSSettingsView: View {
                         HStack {
                             Text("Startup connection")
                             Spacer()
-                            Picker("", selection: startupBehavior) {
+                            Picker("", selection: .fromRawValue(rawValue: $startupBehaviorRaw, defaultValue: AppDefaults.startupConnectionBehavior)) {
                                 Text("Last used server").tag(StartupConnectionBehavior.lastUsed)
                                 Text("Default server").tag(StartupConnectionBehavior.defaultServer)
                             }
@@ -160,11 +160,7 @@ struct macOSSettingsView: View {
                 GroupBox(label: Text("Reset").font(.headline)) {
                     VStack {
                         Button("Reset All Settings") {
-                            // Reset to shared defaults
-                            themeManager.setAccentColor(AppDefaults.accentColor)
-                            themeManager.setThemeMode(AppDefaults.themeMode)
-                            showContentTypeIcons = AppDefaults.showContentTypeIcons
-                            store.updatePollInterval(AppDefaults.pollInterval)
+                            SettingsView.resetAllSettings(store: store)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.vertical, 4)
