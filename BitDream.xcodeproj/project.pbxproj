@@ -40,6 +40,7 @@
 		4B73985C2E70097C00D06E5D /* AppFileOpenDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B73985A2E70097C00D06E5D /* AppFileOpenDelegate.swift */; };
 		4B73985E2E70181D00D06E5D /* macOSStatisticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B73985D2E70181D00D06E5D /* macOSStatisticsView.swift */; };
 		4B7398602E7029BD00D06E5D /* macOSAboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B73985F2E7029BD00D06E5D /* macOSAboutView.swift */; };
+		4B77C3CE2E73C5A200A56F31 /* MagnetQueueController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B77C3CD2E73C5A200A56F31 /* MagnetQueueController.swift */; };
 		4B7EF5712E6E9F0C00C1C281 /* AppConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B7EF5702E6E9F0C00C1C281 /* AppConfig.swift */; };
 		4B9CAC542D7E833A0094CD03 /* macOSAddTorrent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9CAC532D7E833A0094CD03 /* macOSAddTorrent.swift */; };
 		4B9CAC562D7E83460094CD03 /* iOSAddTorrent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9CAC552D7E83460094CD03 /* iOSAddTorrent.swift */; };
@@ -93,6 +94,7 @@
 		4B73985A2E70097C00D06E5D /* AppFileOpenDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppFileOpenDelegate.swift; sourceTree = "<group>"; };
 		4B73985D2E70181D00D06E5D /* macOSStatisticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = macOSStatisticsView.swift; sourceTree = "<group>"; };
 		4B73985F2E7029BD00D06E5D /* macOSAboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = macOSAboutView.swift; sourceTree = "<group>"; };
+		4B77C3CD2E73C5A200A56F31 /* MagnetQueueController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MagnetQueueController.swift; sourceTree = "<group>"; };
 		4B7EF5702E6E9F0C00C1C281 /* AppConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfig.swift; sourceTree = "<group>"; };
 		4B908AED2E6EBAC700C2DA5C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		4B9CAC532D7E833A0094CD03 /* macOSAddTorrent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = macOSAddTorrent.swift; sourceTree = "<group>"; };
@@ -149,6 +151,7 @@
 				4B9CAC582D7F02FA0094CD03 /* AppBadgeManager.swift */,
 				4B1DADDE295E6C440037E9FB /* BitDreamApp.swift */,
 				4B1DAE11295E72040037E9FB /* FileAccess.swift */,
+				4B77C3CD2E73C5A200A56F31 /* MagnetQueueController.swift */,
 				4B1DADE0295E6C440037E9FB /* Persistence.swift */,
 				4B1DAE0F295E702B0037E9FB /* Store.swift */,
 				4BD938E92D82AF6F006CE97C /* ThemeManager.swift */,
@@ -341,6 +344,7 @@
 				4B6F1EBC2D86C908003D8F6E /* macOSTorrentFileDetail.swift in Sources */,
 				4B054C862E6FEB58004DDB99 /* TorrentExtensions.swift in Sources */,
 				4B1DAE00295E6F600037E9FB /* TransmissionFunctions.swift in Sources */,
+				4B77C3CE2E73C5A200A56F31 /* MagnetQueueController.swift in Sources */,
 				4BD938EB2D82AF6F006CE97C /* ThemeManager.swift in Sources */,
 				4B1DADFE295E6F390037E9FB /* TransmissionModels.swift in Sources */,
 				4B1DAE02295E6FA30037E9FB /* AddTorrent.swift in Sources */,

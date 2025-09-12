@@ -40,10 +40,15 @@ struct macOSAddTorrent: View {
     // MARK: - Body
     var body: some View {
         VStack(spacing: 0) {
-            // Header
+            // Header with queue indicator (1/N)
             HStack {
                 Text("Add Torrent")
                     .font(.headline)
+                if store.magnetQueueTotal > 1, store.magnetQueueDisplayIndex > 0 {
+                    Text("(\(store.magnetQueueDisplayIndex)/\(store.magnetQueueTotal))")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
                 Spacer()
             }
             .padding()

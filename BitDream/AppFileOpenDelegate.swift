@@ -85,11 +85,8 @@ final class AppFileOpenDelegate: NSObject, NSApplicationDelegate, ObservableObje
                             throw NSError(domain: "com.bitdream", code: -2, userInfo: [NSLocalizedDescriptionKey: "Invalid magnet link"])
                         }
                         DispatchQueue.main.async {
-                            store.addTorrentPrefill = magnetString
-                            #if os(macOS)
-                            store.addTorrentInitialMode = .magnet
-                            #endif
-                            store.isShowingAddAlert = true
+                            // Use global queueing to support sequential prompts
+                            store.enqueueMagnet(magnetString)
                         }
                     } else {
                         // File URL path: read data and route to .torrent handler
