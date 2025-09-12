@@ -142,7 +142,7 @@ struct macOSSettingsView: View {
                             .disabled(true)
                             .padding(.top, 4)
                         
-                        Toggle("Show notifications for completed torrents", isOn: .constant(true))
+                        Toggle("Show notifications for completed torrents", isOn: .constant(false))
                             .disabled(true)
                             
                         Text("Advanced settings coming soon")

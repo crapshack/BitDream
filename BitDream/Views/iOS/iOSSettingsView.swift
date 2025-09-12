@@ -170,7 +170,7 @@ struct AccentColorPicker: View {
     iOSSettingsView(store: Store())
 }
 #else
-// Empty struct for macOS to reference - this won't be compiled on iOS but provides the type
+// Empty struct for macOS to reference - this won't be compiled on macOS but provides the type
 struct iOSSettingsView: View {
     @ObservedObject var store: Store
     
