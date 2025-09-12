@@ -17,8 +17,8 @@ extension UserDefaults {
         static let inspectorVisibility = "inspectorVisibility"
         static let sortProperty = "sortProperty"
         static let sortOrder = "sortOrder"
-        static let torrentListCompactMode = "torrentListCompactMode"
-        static let showContentTypeIcons = "showContentTypeIcons"
+        static let torrentListCompactMode = UserDefaultsKeys.torrentListCompactMode
+        static let showContentTypeIcons = UserDefaultsKeys.showContentTypeIcons
     }
     
     static let viewStateDefaults: [String: Any] = [
@@ -127,15 +127,36 @@ func createTorrentSelectionBinding(selectedId: Binding<Int?>, in store: Store) -
 
 // Helper function to set up the host
 func setupHost(hosts: FetchedResults<Host>, store: Store) {
-    hosts.forEach { h in
-        if (h.isDefault) {
-            store.setHost(host: h)
+    // Read behavior from UserDefaults (fallback to default)
+    let behaviorRaw = UserDefaults.standard.string(forKey: UserDefaultsKeys.startupConnectionBehavior) ?? AppDefaults.startupConnectionBehavior.rawValue
+    let behavior = StartupConnectionBehavior(rawValue: behaviorRaw) ?? AppDefaults.startupConnectionBehavior
+
+    func connectToDefaultOrFirst() -> Bool {
+        if let defaultHost = hosts.first(where: { $0.isDefault }) {
+            store.setHost(host: defaultHost)
+            return true
         }
+        if let firstHost = hosts.first {
+            store.setHost(host: firstHost)
+            return true
+        }
+        return false
     }
-    if (store.host != nil) {
-        store.startTimer()
-    } else {
-        // Create a new host
+
+    switch behavior {
+    case .lastUsed:
+        if let savedHostURI = UserDefaults.standard.string(forKey: UserDefaultsKeys.selectedHost),
+           !savedHostURI.isEmpty,
+           let savedHostURL = URL(string: savedHostURI),
+           let savedHost = hosts.first(where: { $0.objectID.uriRepresentation() == savedHostURL }) {
+            store.setHost(host: savedHost)
+            return
+        }
+        if connectToDefaultOrFirst() { return }
+        store.setup = true
+
+    case .defaultServer:
+        if connectToDefaultOrFirst() { return }
         store.setup = true
     }
 }

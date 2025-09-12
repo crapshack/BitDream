@@ -8,6 +8,7 @@ struct iOSSettingsView: View {
     @ObservedObject var store: Store
     @ObservedObject private var themeManager = ThemeManager.shared
     @AppStorage(UserDefaultsKeys.showContentTypeIcons) private var showContentTypeIcons: Bool = AppDefaults.showContentTypeIcons
+    @AppStorage(UserDefaultsKeys.startupConnectionBehavior) private var startupBehaviorRaw: String = AppDefaults.startupConnectionBehavior.rawValue
     
     var body: some View {
         // iOS version with standard styling
@@ -35,6 +36,13 @@ struct iOSSettingsView: View {
                     Toggle("Show file type icons", isOn: $showContentTypeIcons)
                 }
                 
+                Section(header: Text("Startup")) {
+                    Picker("Startup connection", selection: .fromRawValue(rawValue: $startupBehaviorRaw, defaultValue: AppDefaults.startupConnectionBehavior)) {
+                        Text("Last used server").tag(StartupConnectionBehavior.lastUsed)
+                        Text("Default server").tag(StartupConnectionBehavior.defaultServer)
+                    }
+                }
+                
                 Section(header: Text("Refresh Settings")) {
                     Picker("Poll Interval", selection: Binding(
                         get: { self.store.pollInterval },
@@ -49,11 +57,7 @@ struct iOSSettingsView: View {
                 
                 Section(header: Text("Reset")) {
                     Button(action: {
-                        // Reset to shared defaults
-                        themeManager.setAccentColor(AppDefaults.accentColor)
-                        themeManager.setThemeMode(AppDefaults.themeMode)
-                        showContentTypeIcons = AppDefaults.showContentTypeIcons
-                        store.updatePollInterval(AppDefaults.pollInterval)
+                        SettingsView.resetAllSettings(store: store)
                     }) {
                         Text("Reset All Settings")
                             .foregroundColor(.accentColor)
