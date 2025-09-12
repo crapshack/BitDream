@@ -239,7 +239,10 @@ struct macOSContentView: View {
         .sheet(isPresented: $store.editServers) {
             ServerList(store: store, viewContext: viewContext)
         }
-        .sheet(isPresented: $store.isShowingAddAlert) {
+        .sheet(isPresented: $store.isShowingAddAlert, onDismiss: {
+            // Advance queued magnet links when the sheet closes
+            store.advanceMagnetQueue()
+        }) {
             AddTorrent(store: store)
         }
         .sheet(isPresented: $store.isError) {
@@ -274,7 +277,9 @@ struct macOSContentView: View {
             updateAppBadge()
         }
         .onAppear {
-            setupHost(hosts: hosts, store: store)
+            if store.host == nil {
+                setupHost(hosts: hosts, store: store)
+            }
             updateAppBadge()
         }
     }

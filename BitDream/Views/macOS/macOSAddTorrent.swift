@@ -40,10 +40,15 @@ struct macOSAddTorrent: View {
     // MARK: - Body
     var body: some View {
         VStack(spacing: 0) {
-            // Header
+            // Header with queue indicator (1/N)
             HStack {
                 Text("Add Torrent")
                     .font(.headline)
+                if store.magnetQueueTotal > 1, store.magnetQueueDisplayIndex > 0 {
+                    Text("(\(store.magnetQueueDisplayIndex)/\(store.magnetQueueTotal))")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
                 Spacer()
             }
             .padding()
@@ -326,6 +331,13 @@ struct macOSAddTorrent: View {
                     inputMethod = .torrentFile
                 }
                 store.addTorrentInitialMode = nil
+            }
+            // Pre-fill magnet link if provided by delegate
+            if let prefill = store.addTorrentPrefill, !prefill.isEmpty {
+                inputMethod = .magnetLink
+                alertInput = prefill
+                // Clear after consuming so subsequent opens don't reuse it
+                store.addTorrentPrefill = nil
             }
             #endif
         }

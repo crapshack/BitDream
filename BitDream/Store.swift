@@ -31,6 +31,13 @@ class Store: NSObject, ObservableObject {
     @Published var defaultDownloadDir: String = ""
     
     @Published var isShowingAddAlert: Bool = false
+    // When presenting Add Torrent, optional prefill for the magnet link input (macOS only used)
+    @Published var addTorrentPrefill: String? = nil
+    // Queue of pending magnet links to present sequentially (macOS)
+    @Published var pendingMagnetQueue: [String] = []
+    // Visual indicator state for queued magnets
+    @Published var magnetQueueDisplayIndex: Int = 0
+    @Published var magnetQueueTotal: Int = 0
     @Published var isShowingServerAlert: Bool = false
     @Published var editServers: Bool = false {
         didSet {
@@ -94,8 +101,57 @@ class Store: NSObject, ObservableObject {
             self.pollInterval = AppDefaults.pollInterval
         }
     }
+
+    // MARK: - Magnet Queue Helpers (macOS)
+    #if os(macOS)
+    func enqueueMagnet(_ magnet: String) {
+        DispatchQueue.main.async {
+            let wasEmpty = self.pendingMagnetQueue.isEmpty
+            self.pendingMagnetQueue.append(magnet)
+            if wasEmpty {
+                // New batch
+                self.magnetQueueTotal = self.pendingMagnetQueue.count
+                self.magnetQueueDisplayIndex = 1
+                if !self.isShowingAddAlert {
+                    self.presentNextMagnetIfAvailable()
+                }
+            } else {
+                // Increase total while batch is in progress
+                self.magnetQueueTotal += 1
+            }
+        }
+    }
+    
+    func presentNextMagnetIfAvailable() {
+        guard let next = pendingMagnetQueue.first else { return }
+        addTorrentPrefill = next
+        addTorrentInitialMode = .magnet
+        isShowingAddAlert = true
+    }
+    
+    func advanceMagnetQueue() {
+        DispatchQueue.main.async {
+            if !self.pendingMagnetQueue.isEmpty {
+                self.pendingMagnetQueue.removeFirst()
+            }
+            if !self.pendingMagnetQueue.isEmpty {
+                // Move to next item in the same batch
+                self.magnetQueueDisplayIndex = min(self.magnetQueueDisplayIndex + 1, self.magnetQueueTotal)
+                self.presentNextMagnetIfAvailable()
+            } else {
+                // Batch complete
+                self.magnetQueueDisplayIndex = 0
+                self.magnetQueueTotal = 0
+            }
+        }
+    }
+    #endif
     
     public func setHost(host: Host) {
+        // Avoid redundant resets if host is unchanged (prevents list flash)
+        if let current = self.host, current.objectID == host.objectID {
+            return
+        }
         var config = TransmissionConfig()
         config.host = host.server
         config.port = Int(host.port)
