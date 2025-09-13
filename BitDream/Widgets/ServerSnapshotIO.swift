@@ -14,7 +14,7 @@ func writeServersIndex(store: Store) {
     let name = host.name ?? host.server ?? "Server"
     guard let url = AppGroup.Files.serversIndexURL() else { return }
 
-    var existing: ServerIndex = AppGroupJSON.read(ServerIndex.self, from: url) ?? ServerIndex(servers: [])
+    let existing: ServerIndex = AppGroupJSON.read(ServerIndex.self, from: url) ?? ServerIndex(servers: [])
     let summary = ServerSummary(id: id, name: name)
     var dict = Dictionary(uniqueKeysWithValues: existing.servers.map { ($0.id, $0) })
     dict[id] = summary

@@ -16,18 +16,6 @@ struct macOSContentView: View {
     // Add ThemeManager to access accent color
     @ObservedObject private var themeManager = ThemeManager.shared
     
-    // Computed property to get the selected torrents from the Store
-    private var torrentSelection: Binding<Set<Torrent>> {
-        Binding<Set<Torrent>>(
-            get: {
-                store.selectedTorrents
-            },
-            set: { newSelection in
-                store.selectedTorrentIds = Set(newSelection.map { $0.id })
-            }
-        )
-    }
-    
     @State var sortProperty: SortProperty = UserDefaults.standard.sortProperty
     @State var sortOrder: SortOrder = UserDefaults.standard.sortOrder
     @State private var filterBySelection: [TorrentStatusCalc] = TorrentStatusCalc.allCases
@@ -259,15 +247,13 @@ struct macOSContentView: View {
             filterBySelection = newValue.filter
             
             // Only clear selection if the selected torrent isn't in the new filtered list
-            if let selectedTorrent = torrentSelection.wrappedValue.first {
-                // Break up the complex expression
+            if let selectedId = store.selectedTorrentIds.first {
                 let filteredTorrents = store.torrents.filtered(by: newValue.filter)
                     .filter { torrentMatchesSearch($0, query: searchText) }
-                let isSelectedTorrentInFilteredList = filteredTorrents.contains { $0.id == selectedTorrent.id }
+                let isSelectedTorrentInFilteredList = filteredTorrents.contains { $0.id == selectedId }
                 
                 if !isSelectedTorrentInFilteredList {
-                    // Selected torrent is not in the new filtered list, clear selection
-                    torrentSelection.wrappedValue.removeAll()
+                    store.selectedTorrentIds.removeAll()
                 }
             }
             
@@ -410,12 +396,11 @@ struct macOSContentView: View {
     // Extracted to simplify onChange(of: searchText)
     private func handleSearchTextChange(oldValue: String, newValue: String) {
         // Clear selection if the selected torrent no longer matches the search
-        if let selectedTorrent = torrentSelection.wrappedValue.first {
-            let matchesSearch = torrentMatchesSearch(selectedTorrent, query: searchText)
-            let filteredTorrents = store.torrents.filtered(by: filterBySelection)
-            let isSelectedTorrentInFilteredList = filteredTorrents.contains { $0.id == selectedTorrent.id }
-            if !matchesSearch || !isSelectedTorrentInFilteredList {
-                torrentSelection.wrappedValue.removeAll()
+        if let selectedId = store.selectedTorrentIds.first {
+            let selectedMatches = store.torrents.first(where: { $0.id == selectedId }).map { torrentMatchesSearch($0, query: searchText) } ?? false
+            let isInFiltered = store.torrents.filtered(by: filterBySelection).contains { $0.id == selectedId }
+            if !selectedMatches || !isInFiltered {
+                store.selectedTorrentIds.removeAll()
             }
         }
     }
@@ -650,15 +635,15 @@ struct macOSContentView: View {
                         .focused($focusedTarget, equals: .contentList)
                     } else {
                         // Expanded list view
-                        List(selection: torrentSelection) {
+                        List(selection: $store.selectedTorrentIds) {
                             ForEach(sortedTorrents, id: \.id) { torrent in
                                 macOSTorrentListExpanded(
                                     torrent: binding(for: torrent, in: store),
                                     store: store,
-                                    selectedTorrents: torrentSelection,
+                                    selectedTorrents: .constant([]),
                                     showContentTypeIcons: showContentTypeIcons
                                 )
-                                .tag(torrent)
+                                .tag(torrent.id)
                                 .listRowSeparator(.visible)
                             }
                         }
@@ -741,7 +726,8 @@ struct macOSContentView: View {
     
     private var macOSDetail: some View {
         Group {
-            if let selectedTorrent = torrentSelection.wrappedValue.first {
+            if let selectedId = store.selectedTorrentIds.first,
+               let selectedTorrent = store.torrents.first(where: { $0.id == selectedId }) {
                 TorrentDetail(store: store, viewContext: viewContext, torrent: binding(for: selectedTorrent, in: store))
                     .id(selectedTorrent.id)
             } else {

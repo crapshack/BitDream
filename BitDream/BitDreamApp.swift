@@ -29,6 +29,10 @@ struct BitDreamApp: App {
     @State private var appearanceHUDText: String = ""
     @State private var hideHUDWork: DispatchWorkItem?
     
+    #if os(iOS)
+    @Environment(\.scenePhase) private var scenePhase
+    #endif
+    
     init() {
         // Register default values for view state
         UserDefaults.registerViewStateDefaults()
@@ -46,6 +50,10 @@ struct BitDreamApp: App {
                 print("Error requesting notification authorization: \(error)")
             }
         }
+        #endif
+        
+        #if os(iOS)
+        BackgroundRefreshManager.register()
         #endif
     }
 
@@ -207,6 +215,12 @@ struct BitDreamApp: App {
                 .accentColor(themeManager.accentColor) // Apply the accent color to the entire app
                 .environmentObject(themeManager) // Pass the ThemeManager to all views
                 .immediateTheme(manager: themeManager)
+                .task { BackgroundRefreshManager.schedule() }
+                .onChange(of: scenePhase) { oldPhase, newPhase in
+                    if newPhase == .background {
+                        BackgroundRefreshManager.schedule()
+                    }
+                }
         }
         #endif
         
