@@ -37,7 +37,7 @@ struct SessionOverviewProvider: AppIntentTimelineProvider {
             ratio: 9.99, 
             timestamp: .now
         )
-        return Entry(date: .now, snapshot: placeholderSnapshot, isStale: false, isPlaceholder: false)
+        return Entry(date: .now, snapshot: placeholderSnapshot, isStale: false, isPlaceholder: true)
     }
 
     func snapshot(for configuration: Intent, in context: Context) async -> Entry {

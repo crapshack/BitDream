@@ -1,9 +1,4 @@
-//
-//  SharedRefreshLogic.swift
-//  BitDream
-//
 //  Shared refresh logic for both iOS and macOS widget background updates.
-//
 
 import Foundation
 import CoreData

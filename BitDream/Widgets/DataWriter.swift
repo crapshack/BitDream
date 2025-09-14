@@ -1,9 +1,4 @@
-//
-//  ServerSnapshotIO.swift
-//  BitDream
-//
 //  App-only helpers to write App Group snapshot files for widgets.
-//
 
 import Foundation
 import WidgetKit

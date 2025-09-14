@@ -1,9 +1,4 @@
-//
-//  BackgroundActivityScheduler.swift
-//  BitDream
-//
 //  macOS background activity scheduler for widget updates.
-//
 
 #if os(macOS)
 import Foundation
