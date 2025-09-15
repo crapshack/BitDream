@@ -57,6 +57,8 @@ class Store: NSObject, ObservableObject {
     @Published var showConnectionErrorAlert: Bool = false
     @Published var isEditingServerSettings: Bool = false  // Flag to pause reconnection attempts
     
+    @Published var sessionConfiguration: TransmissionSessionResponseArguments?
+    
     @Published var pollInterval: Double = AppDefaults.pollInterval // Default poll interval in seconds
     @Published var shouldActivateSearch: Bool = false
     @Published var shouldToggleInspector: Bool = false
@@ -162,15 +164,21 @@ class Store: NSObject, ObservableObject {
         self.host = host
         
         // Get server version and download directory
-        getSession(config: config, auth: auth) { sessionInfo in
+        getSession(config: config, auth: auth, onResponse: { sessionInfo in
             DispatchQueue.main.async {
                 self.defaultDownloadDir = sessionInfo.downloadDir
+                self.sessionConfiguration = sessionInfo
                 
                 // Store the version in CoreData
                 host.version = sessionInfo.version
                 try? PersistenceController.shared.container.viewContext.save()
             }
-        }
+        }, onError: { error in
+            print("Failed to get session info: \(error)")
+            DispatchQueue.main.async {
+                self.sessionConfiguration = nil
+            }
+        })
         
         // Clear torrents before refreshing to ensure list resets to top
         self.torrents = []

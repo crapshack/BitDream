@@ -387,17 +387,117 @@ public struct TorrentFilesResponseTorrents: Codable {
 
 /// Session info response arguments
 public struct TransmissionSessionResponseArguments: Codable, Hashable {
+    // Existing fields
     public let downloadDir: String
     public let version: String
     
-    public init(downloadDir: String = "unknown", version: String = "unknown") {
+    // Speed & Bandwidth
+    public let speedLimitDown: Int64
+    public let speedLimitDownEnabled: Bool
+    public let speedLimitUp: Int64
+    public let speedLimitUpEnabled: Bool
+    public let altSpeedDown: Int64
+    public let altSpeedUp: Int64
+    public let altSpeedEnabled: Bool
+    
+    // File Management
+    public let incompleteDir: String
+    public let incompleteDirEnabled: Bool
+    public let startAddedTorrents: Bool
+    
+    // Queue Management
+    public let downloadQueueEnabled: Bool
+    public let downloadQueueSize: Int
+    public let seedQueueEnabled: Bool
+    public let seedQueueSize: Int
+    public let seedRatioLimited: Bool
+    public let seedRatioLimit: Double
+    
+    // Network Settings
+    public let peerPort: Int
+    public let portForwardingEnabled: Bool
+    public let dhtEnabled: Bool
+    public let pexEnabled: Bool
+    public let encryption: String
+    public let utpEnabled: Bool
+    
+    public init(
+        downloadDir: String,
+        version: String,
+        speedLimitDown: Int64,
+        speedLimitDownEnabled: Bool,
+        speedLimitUp: Int64,
+        speedLimitUpEnabled: Bool,
+        altSpeedDown: Int64,
+        altSpeedUp: Int64,
+        altSpeedEnabled: Bool,
+        incompleteDir: String,
+        incompleteDirEnabled: Bool,
+        startAddedTorrents: Bool,
+        downloadQueueEnabled: Bool,
+        downloadQueueSize: Int,
+        seedQueueEnabled: Bool,
+        seedQueueSize: Int,
+        seedRatioLimited: Bool,
+        seedRatioLimit: Double,
+        peerPort: Int,
+        portForwardingEnabled: Bool,
+        dhtEnabled: Bool,
+        pexEnabled: Bool,
+        encryption: String,
+        utpEnabled: Bool
+    ) {
         self.downloadDir = downloadDir
         self.version = version
+        self.speedLimitDown = speedLimitDown
+        self.speedLimitDownEnabled = speedLimitDownEnabled
+        self.speedLimitUp = speedLimitUp
+        self.speedLimitUpEnabled = speedLimitUpEnabled
+        self.altSpeedDown = altSpeedDown
+        self.altSpeedUp = altSpeedUp
+        self.altSpeedEnabled = altSpeedEnabled
+        self.incompleteDir = incompleteDir
+        self.incompleteDirEnabled = incompleteDirEnabled
+        self.startAddedTorrents = startAddedTorrents
+        self.downloadQueueEnabled = downloadQueueEnabled
+        self.downloadQueueSize = downloadQueueSize
+        self.seedQueueEnabled = seedQueueEnabled
+        self.seedQueueSize = seedQueueSize
+        self.seedRatioLimited = seedRatioLimited
+        self.seedRatioLimit = seedRatioLimit
+        self.peerPort = peerPort
+        self.portForwardingEnabled = portForwardingEnabled
+        self.dhtEnabled = dhtEnabled
+        self.pexEnabled = pexEnabled
+        self.encryption = encryption
+        self.utpEnabled = utpEnabled
     }
     
     enum CodingKeys: String, CodingKey {
         case downloadDir = "download-dir"
         case version
+        case speedLimitDown = "speed-limit-down"
+        case speedLimitDownEnabled = "speed-limit-down-enabled"
+        case speedLimitUp = "speed-limit-up"
+        case speedLimitUpEnabled = "speed-limit-up-enabled"
+        case altSpeedDown = "alt-speed-down"
+        case altSpeedUp = "alt-speed-up"
+        case altSpeedEnabled = "alt-speed-enabled"
+        case incompleteDir = "incomplete-dir"
+        case incompleteDirEnabled = "incomplete-dir-enabled"
+        case startAddedTorrents = "start-added-torrents"
+        case downloadQueueEnabled = "download-queue-enabled"
+        case downloadQueueSize = "download-queue-size"
+        case seedQueueEnabled = "seed-queue-enabled"
+        case seedQueueSize = "seed-queue-size"
+        case seedRatioLimited = "seedRatioLimited"
+        case seedRatioLimit = "seedRatioLimit"
+        case peerPort = "peer-port"
+        case portForwardingEnabled = "port-forwarding-enabled"
+        case dhtEnabled = "dht-enabled"
+        case pexEnabled = "pex-enabled"
+        case encryption = "encryption"
+        case utpEnabled = "utp-enabled"
     }
 }
 

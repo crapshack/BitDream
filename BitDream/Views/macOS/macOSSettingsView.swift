@@ -171,6 +171,16 @@ struct macOSSettingsView: View {
             .tabItem {
                 Label("Advanced", systemImage: "gearshape.2")
             }
+            
+            // Server Configuration Tab
+            VStack(alignment: .leading, spacing: 20) {
+                serverConfigurationContent(store: store)
+            }
+            .padding(20)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .tabItem {
+                Label("Server Configuration", systemImage: "server.rack")
+            }
         }
         .accentColor(themeManager.accentColor) // Apply the accent color to the TabView
     }

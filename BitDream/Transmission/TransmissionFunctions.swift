@@ -319,22 +319,54 @@ public struct SessionInfo {
     }
 }
 
-/// Get the server's session information including download directory and version
+/// Get the server's session configuration and information
 /// - Parameter config: The server's config
 /// - Parameter auth: The username and password for the server
 /// - Parameter onResponse: An escaping function that receives session information from the server
-public func getSession(config: TransmissionConfig, auth: TransmissionAuth, onResponse: @escaping (TransmissionSessionResponseArguments) -> Void) {
+public func getSession(config: TransmissionConfig, auth: TransmissionAuth, onResponse: @escaping (TransmissionSessionResponseArguments) -> Void, onError: @escaping (String) -> Void) {
+    let fields = [
+        // Existing fields
+        "download-dir",
+        "version",
+        // Speed & Bandwidth
+        "speed-limit-down",
+        "speed-limit-down-enabled",
+        "speed-limit-up",
+        "speed-limit-up-enabled",
+        "alt-speed-down",
+        "alt-speed-up",
+        "alt-speed-enabled",
+        // File Management
+        "incomplete-dir",
+        "incomplete-dir-enabled",
+        "start-added-torrents",
+        // Queue Management
+        "download-queue-enabled",
+        "download-queue-size",
+        "seed-queue-enabled",
+        "seed-queue-size",
+        "seedRatioLimited",
+        "seedRatioLimit",
+        // Network Settings
+        "peer-port",
+        "port-forwarding-enabled",
+        "dht-enabled",
+        "pex-enabled",
+        "encryption",
+        "utp-enabled"
+    ]
+    
     performTransmissionDataRequest(
         method: "session-get",
-        args: ["fields": ["download-dir", "version"]] as StringListArguments,
+        args: ["fields": fields] as StringListArguments,
         config: config,
         auth: auth
     ) { (result: Result<TransmissionGenericResponse<TransmissionSessionResponseArguments>, Error>) in
         switch result {
         case .success(let response):
             onResponse(response.arguments)
-        case .failure(_):
-            onResponse(TransmissionSessionResponseArguments())
+        case .failure(let error):
+            onError(error.localizedDescription)
         }
     }
 }
