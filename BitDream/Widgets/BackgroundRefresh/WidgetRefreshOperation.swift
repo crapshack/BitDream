@@ -29,7 +29,7 @@ final class WidgetRefreshOperation: Operation, @unchecked Sendable {
         }
         
         // Reload widget timelines after all hosts are updated
-        WidgetCenter.shared.reloadTimelines(ofKind: "SessionOverviewWidget")
+        WidgetCenter.shared.reloadTimelines(ofKind: WidgetKind.sessionOverview)
     }
     
     private func fetchHosts() -> [Host] {

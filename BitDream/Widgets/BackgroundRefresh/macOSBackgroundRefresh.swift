@@ -8,6 +8,10 @@ import WidgetKit
 enum BackgroundActivityScheduler {
     private static var scheduler: NSBackgroundActivityScheduler?
     private static let activityIdentifier = "crapshack.BitDream.widgetRefresh"
+    /// Default cadence for macOS background activity refresh (15 minutes)
+    private static let defaultInterval: TimeInterval = 15 * 60
+    /// Default tolerance to let the system batch work efficiently (5 minutes)
+    private static let defaultTolerance: TimeInterval = 5 * 60
     
     /// Register and start the background activity scheduler
     static func register() {
@@ -15,8 +19,8 @@ enum BackgroundActivityScheduler {
         
         let newScheduler = NSBackgroundActivityScheduler(identifier: activityIdentifier)
         newScheduler.repeats = true
-        newScheduler.interval = 15 * 60 // 15 minutes
-        newScheduler.tolerance = 5 * 60  // 5 minute tolerance
+        newScheduler.interval = defaultInterval
+        newScheduler.tolerance = defaultTolerance
         newScheduler.qualityOfService = .utility
         
         newScheduler.schedule { [weak newScheduler] completion in

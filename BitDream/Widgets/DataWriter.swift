@@ -52,7 +52,7 @@ func writeSessionSnapshot(store: Store, stats: SessionStats) {
 
     guard let url = AppGroup.Files.sessionURL(for: id) else { return }
     if AppGroupJSON.write(snap, to: url) {
-        WidgetCenter.shared.reloadTimelines(ofKind: "SessionOverviewWidget")
+        WidgetCenter.shared.reloadTimelines(ofKind: WidgetKind.sessionOverview)
     }
 }
 

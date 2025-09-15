@@ -7,6 +7,9 @@ import WidgetKit
 
 enum BackgroundRefreshManager {
     static let taskIdentifier = "crapshack.BitDream.refresh"
+    /// Default refresh cadence for background app refresh (15 minutes)
+    /// iOS executes opportunistically; this expresses our desired minimum cadence
+    private static let defaultRefreshInterval: TimeInterval = 15 * 60
 
     static func register() {
         BGTaskScheduler.shared.register(forTaskWithIdentifier: taskIdentifier, using: nil) { task in
@@ -14,7 +17,7 @@ enum BackgroundRefreshManager {
         }
     }
 
-    static func schedule(earliestBegin interval: TimeInterval = 30 * 60) {
+    static func schedule(earliestBegin interval: TimeInterval = defaultRefreshInterval) {
         let request = BGAppRefreshTaskRequest(identifier: taskIdentifier)
         request.earliestBeginDate = Date().addingTimeInterval(interval)
         do { try BGTaskScheduler.shared.submit(request) } catch {

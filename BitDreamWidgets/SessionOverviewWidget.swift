@@ -85,7 +85,7 @@ struct SessionOverviewProvider: AppIntentTimelineProvider {
 @main
 struct SessionOverviewWidget: Widget {
     var body: some WidgetConfiguration {
-        AppIntentConfiguration(kind: "SessionOverviewWidget", intent: SessionOverviewIntent.self, provider: SessionOverviewProvider()) { entry in
+        AppIntentConfiguration(kind: WidgetKind.sessionOverview, intent: SessionOverviewIntent.self, provider: SessionOverviewProvider()) { entry in
             let deepLink: URL? = entry.snapshot.flatMap { snap in
                 DeepLinkBuilder.serverURL(serverId: snap.serverId)
             }
