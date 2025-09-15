@@ -8,7 +8,7 @@ import WidgetKit
 /// Shared operation that fetches data for all servers and writes widget snapshots.
 /// Concurrency: Runs on an `OperationQueue`, confines mutable state to the operation's
 /// execution context, and uses a private Core Data background context.
-final class WidgetRefreshOperation: Operation {
+final class WidgetRefreshOperation: Operation, @unchecked Sendable {
     private let context: NSManagedObjectContext
     private let keychain = Keychain(service: "crapshack.BitDream")
     private static let backgroundWaitTimeout: DispatchTimeInterval = .seconds(15)
@@ -75,7 +75,7 @@ final class WidgetRefreshOperation: Operation {
         // Wait with timeout to respect background limits
         let waitResult = group.wait(timeout: .now() + Self.backgroundWaitTimeout)
         if waitResult == .timedOut {
-            let hostIdentifier = host.name ?? host.server
+            let hostIdentifier: String = host.name ?? host.server ?? "Server"
             print("WidgetRefreshOperation: timed out waiting for background fetches for host \(hostIdentifier)")
             return
         }

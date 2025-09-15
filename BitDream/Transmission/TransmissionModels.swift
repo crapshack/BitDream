@@ -507,3 +507,120 @@ public struct TorrentRenameResponseArgs: Codable {
     public let name: String
     public let id: Int
 }
+
+// MARK: - Session Set Request Models
+
+/// Request arguments for session-set method
+/// Contains all mutable session properties that can be modified
+public struct TransmissionSessionSetRequestArgs: Codable {
+    // Speed & Bandwidth
+    public var speedLimitDown: Int64?
+    public var speedLimitDownEnabled: Bool?
+    public var speedLimitUp: Int64?
+    public var speedLimitUpEnabled: Bool?
+    public var altSpeedDown: Int64?
+    public var altSpeedUp: Int64?
+    public var altSpeedEnabled: Bool?
+    public var altSpeedTimeBegin: Int?
+    public var altSpeedTimeEnd: Int?
+    public var altSpeedTimeEnabled: Bool?
+    public var altSpeedTimeDay: Int?
+    
+    // File Management
+    public var downloadDir: String?
+    public var incompleteDir: String?
+    public var incompleteDirEnabled: Bool?
+    public var startAddedTorrents: Bool?
+    public var trashOriginalTorrentFiles: Bool?
+    public var renamePartialFiles: Bool?
+    
+    // Queue Management
+    public var downloadQueueEnabled: Bool?
+    public var downloadQueueSize: Int?
+    public var seedQueueEnabled: Bool?
+    public var seedQueueSize: Int?
+    public var seedRatioLimited: Bool?
+    public var seedRatioLimit: Double?
+    public var idleSeedingLimit: Int?
+    public var idleSeedingLimitEnabled: Bool?
+    public var queueStalledEnabled: Bool?
+    public var queueStalledMinutes: Int?
+    
+    // Network Settings
+    public var peerPort: Int?
+    public var peerPortRandomOnStart: Bool?
+    public var portForwardingEnabled: Bool?
+    public var dhtEnabled: Bool?
+    public var pexEnabled: Bool?
+    public var lpdEnabled: Bool?
+    public var encryption: String?
+    public var utpEnabled: Bool?
+    public var peerLimitGlobal: Int?
+    public var peerLimitPerTorrent: Int?
+    
+    // Blocklist
+    public var blocklistEnabled: Bool?
+    public var blocklistUrl: String?
+    
+    // Cache
+    public var cacheSizeMb: Int?
+    
+    // Scripts
+    public var scriptTorrentDoneEnabled: Bool?
+    public var scriptTorrentDoneFilename: String?
+    public var scriptTorrentAddedEnabled: Bool?
+    public var scriptTorrentAddedFilename: String?
+    public var scriptTorrentDoneSeedingEnabled: Bool?
+    public var scriptTorrentDoneSeedingFilename: String?
+    
+    public init() {}
+    
+    enum CodingKeys: String, CodingKey {
+        case speedLimitDown = "speed-limit-down"
+        case speedLimitDownEnabled = "speed-limit-down-enabled"
+        case speedLimitUp = "speed-limit-up"
+        case speedLimitUpEnabled = "speed-limit-up-enabled"
+        case altSpeedDown = "alt-speed-down"
+        case altSpeedUp = "alt-speed-up"
+        case altSpeedEnabled = "alt-speed-enabled"
+        case altSpeedTimeBegin = "alt-speed-time-begin"
+        case altSpeedTimeEnd = "alt-speed-time-end"
+        case altSpeedTimeEnabled = "alt-speed-time-enabled"
+        case altSpeedTimeDay = "alt-speed-time-day"
+        case downloadDir = "download-dir"
+        case incompleteDir = "incomplete-dir"
+        case incompleteDirEnabled = "incomplete-dir-enabled"
+        case startAddedTorrents = "start-added-torrents"
+        case trashOriginalTorrentFiles = "trash-original-torrent-files"
+        case renamePartialFiles = "rename-partial-files"
+        case downloadQueueEnabled = "download-queue-enabled"
+        case downloadQueueSize = "download-queue-size"
+        case seedQueueEnabled = "seed-queue-enabled"
+        case seedQueueSize = "seed-queue-size"
+        case seedRatioLimited = "seedRatioLimited"
+        case seedRatioLimit = "seedRatioLimit"
+        case idleSeedingLimit = "idle-seeding-limit"
+        case idleSeedingLimitEnabled = "idle-seeding-limit-enabled"
+        case queueStalledEnabled = "queue-stalled-enabled"
+        case queueStalledMinutes = "queue-stalled-minutes"
+        case peerPort = "peer-port"
+        case peerPortRandomOnStart = "peer-port-random-on-start"
+        case portForwardingEnabled = "port-forwarding-enabled"
+        case dhtEnabled = "dht-enabled"
+        case pexEnabled = "pex-enabled"
+        case lpdEnabled = "lpd-enabled"
+        case encryption = "encryption"
+        case utpEnabled = "utp-enabled"
+        case peerLimitGlobal = "peer-limit-global"
+        case peerLimitPerTorrent = "peer-limit-per-torrent"
+        case blocklistEnabled = "blocklist-enabled"
+        case blocklistUrl = "blocklist-url"
+        case cacheSizeMb = "cache-size-mb"
+        case scriptTorrentDoneEnabled = "script-torrent-done-enabled"
+        case scriptTorrentDoneFilename = "script-torrent-done-filename"
+        case scriptTorrentAddedEnabled = "script-torrent-added-enabled"
+        case scriptTorrentAddedFilename = "script-torrent-added-filename"
+        case scriptTorrentDoneSeedingEnabled = "script-torrent-done-seeding-enabled"
+        case scriptTorrentDoneSeedingFilename = "script-torrent-done-seeding-filename"
+    }
+}

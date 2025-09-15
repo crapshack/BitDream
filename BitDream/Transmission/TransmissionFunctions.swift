@@ -630,3 +630,26 @@ public func queueMoveBottom(
         completion: completion
     )
 }
+
+// MARK: - Session Configuration Functions
+
+/// Update session configuration settings using the session-set method
+/// - Parameters:
+///   - args: TransmissionSessionSetRequestArgs containing the properties to update
+///   - config: Server configuration
+///   - auth: Authentication credentials
+///   - completion: Called when the server's response is received
+public func setSession(
+    args: TransmissionSessionSetRequestArgs,
+    config: TransmissionConfig,
+    auth: TransmissionAuth,
+    completion: @escaping (TransmissionResponse) -> Void
+) {
+    performTransmissionStatusRequest(
+        method: "session-set",
+        args: args,
+        config: config,
+        auth: auth,
+        completion: completion
+    )
+}

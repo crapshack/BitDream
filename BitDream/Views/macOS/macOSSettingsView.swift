@@ -6,6 +6,7 @@ struct macOSSettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var showingThemeSettings = false
     @ObservedObject var store: Store
+    @StateObject private var editModel = SessionSettingsEditModel()
     
     // Use ThemeManager instead of direct AppStorage
     @ObservedObject private var themeManager = ThemeManager.shared
@@ -174,7 +175,7 @@ struct macOSSettingsView: View {
             
             // Server Configuration Tab
             VStack(alignment: .leading, spacing: 20) {
-                serverConfigurationContent(store: store)
+                serverConfigurationContent(store: store, editModel: editModel)
             }
             .padding(20)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)

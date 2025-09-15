@@ -235,6 +235,26 @@ class Store: NSObject, ObservableObject {
         }
     }
     
+    // Computed property to provide current server info for session-set calls
+    var currentServerInfo: (config: TransmissionConfig, auth: TransmissionAuth)? {
+        guard let server = self.server else { return nil }
+        return (config: server.config, auth: server.auth)
+    }
+    
+    // Method to refresh session configuration after settings changes
+    func refreshSessionConfiguration() {
+        guard let serverInfo = currentServerInfo else { return }
+        
+        getSession(config: serverInfo.config, auth: serverInfo.auth, onResponse: { sessionInfo in
+            DispatchQueue.main.async {
+                self.sessionConfiguration = sessionInfo
+                self.defaultDownloadDir = sessionInfo.downloadDir
+            }
+        }, onError: { error in
+            print("Failed to refresh session info: \(error)")
+        })
+    }
+    
     // Method to handle connection errors
     func handleConnectionError(message: String) {
         DispatchQueue.main.async {
