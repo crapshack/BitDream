@@ -47,23 +47,8 @@ struct SessionOverviewProvider: AppIntentTimelineProvider {
     }
 
     func placeholder(in context: Context) -> Entry {
-        // DEBUG: Test if this method is being called at all
         // Show realistic preview data so users understand what the widget does
-        let placeholderSnapshot = SessionOverviewSnapshot(
-            serverId: "PLACEHOLDER_TEST", 
-            serverName: "PREVIEW SERVER", 
-            active: 99, 
-            paused: 88, 
-            total: 77, 
-            totalCount: 77, 
-            downloadingCount: 99, 
-            completedCount: 66, 
-            downloadSpeed: Int64(9_999_999), // Should be obvious
-            uploadSpeed: Int64(8_888_888),   // Should be obvious
-            ratio: 9.99, 
-            timestamp: .now
-        )
-        return Entry(date: .now, snapshot: placeholderSnapshot, isStale: false, isPlaceholder: true)
+        return Entry(date: .now, snapshot: makeGalleryPreviewSnapshot(), isStale: false, isPlaceholder: true)
     }
 
     func snapshot(for configuration: Intent, in context: Context) async -> Entry {

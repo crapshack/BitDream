@@ -98,6 +98,20 @@ struct macOSContentView: View {
         .frame(maxWidth: 400, minHeight: 80)
     }
     
+    // Binding for selected torrents derived from selected IDs
+    private var selectedTorrentsBinding: Binding<Set<Torrent>> {
+        Binding<Set<Torrent>>(
+            get: {
+                Set(store.selectedTorrentIds.compactMap { id in
+                    store.torrents.first { $0.id == id }
+                })
+            },
+            set: { newSelection in
+                store.selectedTorrentIds = Set(newSelection.map { $0.id })
+            }
+        )
+    }
+    
     // Helper function to check if a torrent matches the search query and label filters
     private func torrentMatchesSearch(_ torrent: Torrent, query: String) -> Bool {
         // Check no-labels filter first
@@ -636,16 +650,6 @@ struct macOSContentView: View {
                     } else {
                         // Expanded list view
                         List(selection: $store.selectedTorrentIds) {
-                            let selectedTorrentsBinding = Binding<Set<Torrent>>(
-                                get: {
-                                    Set(store.selectedTorrentIds.compactMap { id in
-                                        store.torrents.first { $0.id == id }
-                                    })
-                                },
-                                set: { newSelection in
-                                    store.selectedTorrentIds = Set(newSelection.map { $0.id })
-                                }
-                            )
                             ForEach(sortedTorrents, id: \.id) { torrent in
                                 TorrentListRow(
                                     torrent: binding(for: torrent, in: store),
