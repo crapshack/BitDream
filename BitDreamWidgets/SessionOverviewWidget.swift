@@ -19,6 +19,7 @@ struct SessionOverviewEntry: TimelineEntry {
 struct SessionOverviewProvider: AppIntentTimelineProvider {
     typealias Entry = SessionOverviewEntry
     typealias Intent = SessionOverviewIntent
+    private static let refreshInterval: TimeInterval = 600
 
     // MARK: - Preview helpers
     private func shouldUseGalleryPreview(_ configuration: Intent, _ context: Context) -> Bool {
@@ -67,7 +68,7 @@ struct SessionOverviewProvider: AppIntentTimelineProvider {
             entry = await loadEntry(for: configuration.server?.id)
         }
         
-        let next = Calendar.current.date(byAdding: .minute, value: 10, to: Date()) ?? Date().addingTimeInterval(600)
+        let next = Date().addingTimeInterval(Self.refreshInterval)
         return Timeline(entries: [entry], policy: .after(next))
     }
 
@@ -77,7 +78,7 @@ struct SessionOverviewProvider: AppIntentTimelineProvider {
               let snap: SessionOverviewSnapshot = AppGroupJSON.read(SessionOverviewSnapshot.self, from: url) else {
             return Entry(date: .now, snapshot: nil, isStale: true, isPlaceholder: false)
         }
-        let isStale = (Date().timeIntervalSince(snap.timestamp) > 600)
+        let isStale = (Date().timeIntervalSince(snap.timestamp) > Self.refreshInterval)
         return Entry(date: .now, snapshot: snap, isStale: isStale, isPlaceholder: false)
     }
 }
