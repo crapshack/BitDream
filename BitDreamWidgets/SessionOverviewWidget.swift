@@ -20,6 +20,32 @@ struct SessionOverviewProvider: AppIntentTimelineProvider {
     typealias Entry = SessionOverviewEntry
     typealias Intent = SessionOverviewIntent
 
+    // MARK: - Preview helpers
+    private func shouldUseGalleryPreview(_ configuration: Intent, _ context: Context) -> Bool {
+        configuration.server?.id == nil && context.isPreview
+    }
+
+    private func makeGalleryPreviewSnapshot() -> SessionOverviewSnapshot {
+        SessionOverviewSnapshot(
+            serverId: "preview",
+            serverName: "Home Server",
+            active: 3,
+            paused: 2,
+            total: 15,
+            totalCount: 15,
+            downloadingCount: 3,
+            completedCount: 10,
+            downloadSpeed: Int64(2_400_000),
+            uploadSpeed: Int64(850_000),
+            ratio: 1.25,
+            timestamp: .now
+        )
+    }
+
+    private func makeGalleryPreviewEntry() -> Entry {
+        Entry(date: .now, snapshot: makeGalleryPreviewSnapshot(), isStale: false, isPlaceholder: false)
+    }
+
     func placeholder(in context: Context) -> Entry {
         // DEBUG: Test if this method is being called at all
         // Show realistic preview data so users understand what the widget does
@@ -42,23 +68,7 @@ struct SessionOverviewProvider: AppIntentTimelineProvider {
 
     func snapshot(for configuration: Intent, in context: Context) async -> Entry {
         // Only show fake data for widget gallery preview, not for actual widgets
-        if configuration.server?.id == nil && context.isPreview {
-            let placeholderSnapshot = SessionOverviewSnapshot(
-                serverId: "preview", 
-                serverName: "Home Server", 
-                active: 3, 
-                paused: 2, 
-                total: 15, 
-                totalCount: 15, 
-                downloadingCount: 3, 
-                completedCount: 10, 
-                downloadSpeed: Int64(2_400_000), // 2.4 MB/s
-                uploadSpeed: Int64(850_000),     // 850 KB/s
-                ratio: 1.25, 
-                timestamp: .now
-            )
-            return Entry(date: .now, snapshot: placeholderSnapshot, isStale: false, isPlaceholder: false)
-        }
+        if shouldUseGalleryPreview(configuration, context) { return makeGalleryPreviewEntry() }
         
         return await loadEntry(for: configuration.server?.id)
     }
@@ -66,22 +76,8 @@ struct SessionOverviewProvider: AppIntentTimelineProvider {
     func timeline(for configuration: Intent, in context: Context) async -> Timeline<Entry> {
         // Only show fake data for widget gallery preview, not for actual widgets
         let entry: Entry
-        if configuration.server?.id == nil && context.isPreview {
-            let placeholderSnapshot = SessionOverviewSnapshot(
-                serverId: "preview", 
-                serverName: "Home Server", 
-                active: 3, 
-                paused: 2, 
-                total: 15, 
-                totalCount: 15, 
-                downloadingCount: 3, 
-                completedCount: 10, 
-                downloadSpeed: Int64(2_400_000),
-                uploadSpeed: Int64(850_000),
-                ratio: 1.25, 
-                timestamp: .now
-            )
-            entry = Entry(date: .now, snapshot: placeholderSnapshot, isStale: false, isPlaceholder: false)
+        if shouldUseGalleryPreview(configuration, context) {
+            entry = makeGalleryPreviewEntry()
         } else {
             entry = await loadEntry(for: configuration.server?.id)
         }
@@ -128,6 +124,13 @@ private struct SessionOverviewBackground: View {
     @Environment(\.widgetFamily) var family
 
     private var headerHeight: CGFloat { 32 }
+    private static let speedFormatter: ByteCountFormatter = {
+        let f = ByteCountFormatter()
+        f.allowsNonnumericFormatting = false
+        f.countStyle = .file
+        f.allowedUnits = [.useKB, .useMB, .useGB, .useTB]
+        return f
+    }()
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -181,13 +184,6 @@ private struct SessionOverviewBackground: View {
                 VStack {
                     Spacer()
                     HStack(spacing: 8) {
-                        let formatter: ByteCountFormatter = {
-                            let f = ByteCountFormatter()
-                            f.allowsNonnumericFormatting = false
-                            f.countStyle = .file
-                            f.allowedUnits = [.useKB, .useMB, .useGB, .useTB]
-                            return f
-                        }()
                         let speedFont = Font.system(size: 10, weight: .regular, design: .monospaced)
 
                         // Only show ratio on medium
@@ -199,7 +195,7 @@ private struct SessionOverviewBackground: View {
                         HStack(spacing: 2) {
                             Image(systemName: "arrow.down")
                                 .foregroundColor(.blue)
-                            Text("\(formatter.string(fromByteCount: snap.downloadSpeed))/s")
+                            Text("\(Self.speedFormatter.string(fromByteCount: snap.downloadSpeed))/s")
                         }
                         .font(speedFont)
                         .foregroundStyle(.primary)
@@ -212,7 +208,7 @@ private struct SessionOverviewBackground: View {
                         HStack(spacing: 2) {
                             Image(systemName: "arrow.up")
                                 .foregroundColor(.green)
-                            Text("\(formatter.string(fromByteCount: snap.uploadSpeed))/s")
+                            Text("\(Self.speedFormatter.string(fromByteCount: snap.uploadSpeed))/s")
                         }
                         .font(speedFont)
                         .foregroundStyle(.primary)

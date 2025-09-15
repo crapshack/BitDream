@@ -9,6 +9,7 @@ import WidgetKit
 final class WidgetRefreshOperation: Operation, @unchecked Sendable {
     private let context: NSManagedObjectContext
     private let keychain = Keychain(service: "crapshack.BitDream")
+    private static let backgroundWaitTimeout: DispatchTimeInterval = .seconds(15)
     
     override init() {
         self.context = PersistenceController.shared.container.newBackgroundContext()
@@ -70,7 +71,7 @@ final class WidgetRefreshOperation: Operation, @unchecked Sendable {
         }
         
         // Wait with timeout to respect background limits
-        _ = group.wait(timeout: .now() + 15)
+        _ = group.wait(timeout: .now() + Self.backgroundWaitTimeout)
         
         guard let stats = stats, !isCancelled else { return }
         
