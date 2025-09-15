@@ -73,7 +73,12 @@ final class WidgetRefreshOperation: Operation {
         }
         
         // Wait with timeout to respect background limits
-        _ = group.wait(timeout: .now() + Self.backgroundWaitTimeout)
+        let waitResult = group.wait(timeout: .now() + Self.backgroundWaitTimeout)
+        if waitResult == .timedOut {
+            let hostIdentifier = host.name ?? host.server
+            print("WidgetRefreshOperation: timed out waiting for background fetches for host \(hostIdentifier)")
+            return
+        }
         
         guard let stats = stats, !isCancelled else { return }
         
