@@ -636,11 +636,21 @@ struct macOSContentView: View {
                     } else {
                         // Expanded list view
                         List(selection: $store.selectedTorrentIds) {
+                            let selectedTorrentsBinding = Binding<Set<Torrent>>(
+                                get: {
+                                    Set(store.selectedTorrentIds.compactMap { id in
+                                        store.torrents.first { $0.id == id }
+                                    })
+                                },
+                                set: { newSelection in
+                                    store.selectedTorrentIds = Set(newSelection.map { $0.id })
+                                }
+                            )
                             ForEach(sortedTorrents, id: \.id) { torrent in
-                                macOSTorrentListExpanded(
+                                TorrentListRow(
                                     torrent: binding(for: torrent, in: store),
                                     store: store,
-                                    selectedTorrents: .constant([]),
+                                    selectedTorrents: selectedTorrentsBinding,
                                     showContentTypeIcons: showContentTypeIcons
                                 )
                                 .tag(torrent.id)

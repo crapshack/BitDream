@@ -17,7 +17,9 @@ enum BackgroundRefreshManager {
     static func schedule(earliestBegin interval: TimeInterval = 30 * 60) {
         let request = BGAppRefreshTaskRequest(identifier: taskIdentifier)
         request.earliestBeginDate = Date().addingTimeInterval(interval)
-        do { try BGTaskScheduler.shared.submit(request) } catch { }
+        do { try BGTaskScheduler.shared.submit(request) } catch {
+            print("BGTaskScheduler submit failed for \(taskIdentifier): \(error)")
+        }
     }
 
     private static func handle(task: BGAppRefreshTask) {

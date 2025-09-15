@@ -87,9 +87,7 @@ struct BitDreamApp: App {
                     appFileOpenDelegate.configure(with: store)
                 }
                 .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in
-                    #if os(macOS)
                     BackgroundActivityScheduler.unregister()
-                    #endif
                 }
                 .overlay(alignment: .center) {
                     if showAppearanceHUD {
