@@ -205,7 +205,7 @@ func speedLimitsSection(config: TransmissionSessionResponseArguments, editModel:
                     get: { editModel.getValue("speedLimitDownEnabled", fallback: config.speedLimitDownEnabled) },
                     set: { editModel.setValue("speedLimitDownEnabled", $0, original: config.speedLimitDownEnabled) }
                 ))
-                .toggleStyle(.checkbox)
+                .platformToggleStyle()
                 Spacer()
                 TextField("KB/s", value: Binding(
                     get: { editModel.getValue("speedLimitDown", fallback: config.speedLimitDown) },
@@ -221,7 +221,7 @@ func speedLimitsSection(config: TransmissionSessionResponseArguments, editModel:
                     get: { editModel.getValue("speedLimitUpEnabled", fallback: config.speedLimitUpEnabled) },
                     set: { editModel.setValue("speedLimitUpEnabled", $0, original: config.speedLimitUpEnabled) }
                 ))
-                .toggleStyle(.checkbox)
+                .platformToggleStyle()
                 Spacer()
                 TextField("KB/s", value: Binding(
                     get: { editModel.getValue("speedLimitUp", fallback: config.speedLimitUp) },
@@ -241,7 +241,7 @@ func speedLimitsSection(config: TransmissionSessionResponseArguments, editModel:
                     get: { editModel.getValue("altSpeedEnabled", fallback: config.altSpeedEnabled) },
                     set: { editModel.setValue("altSpeedEnabled", $0, original: config.altSpeedEnabled) }
                 ))
-                .toggleStyle(.checkbox)
+                .platformToggleStyle()
                 
                 HStack {
                     Text("Download")
@@ -291,7 +291,7 @@ func networkSection(config: TransmissionSessionResponseArguments, editModel: Ses
                 get: { editModel.getValue("portForwardingEnabled", fallback: config.portForwardingEnabled) },
                 set: { editModel.setValue("portForwardingEnabled", $0, original: config.portForwardingEnabled) }
             ))
-            .toggleStyle(.checkbox)
+            .platformToggleStyle()
             
             HStack {
                 Text("Encryption")
@@ -312,17 +312,17 @@ func networkSection(config: TransmissionSessionResponseArguments, editModel: Ses
                 get: { editModel.getValue("dhtEnabled", fallback: config.dhtEnabled) },
                 set: { editModel.setValue("dhtEnabled", $0, original: config.dhtEnabled) }
             ))
-            .toggleStyle(.checkbox)
+            .platformToggleStyle()
             Toggle("PEX", isOn: Binding(
                 get: { editModel.getValue("pexEnabled", fallback: config.pexEnabled) },
                 set: { editModel.setValue("pexEnabled", $0, original: config.pexEnabled) }
             ))
-            .toggleStyle(.checkbox)
+            .platformToggleStyle()
             Toggle("µTP", isOn: Binding(
                 get: { editModel.getValue("utpEnabled", fallback: config.utpEnabled) },
                 set: { editModel.setValue("utpEnabled", $0, original: config.utpEnabled) }
             ))
-            .toggleStyle(.checkbox)
+            .platformToggleStyle()
         }
         .padding(10)
     }
@@ -337,7 +337,7 @@ func queueManagementSection(config: TransmissionSessionResponseArguments, editMo
                     get: { editModel.getValue("downloadQueueEnabled", fallback: config.downloadQueueEnabled) },
                     set: { editModel.setValue("downloadQueueEnabled", $0, original: config.downloadQueueEnabled) }
                 ))
-                .toggleStyle(.checkbox)
+                .platformToggleStyle()
                 Spacer()
                 TextField("Size", value: Binding(
                     get: { editModel.getValue("downloadQueueSize", fallback: config.downloadQueueSize) },
@@ -353,7 +353,7 @@ func queueManagementSection(config: TransmissionSessionResponseArguments, editMo
                     get: { editModel.getValue("seedQueueEnabled", fallback: config.seedQueueEnabled) },
                     set: { editModel.setValue("seedQueueEnabled", $0, original: config.seedQueueEnabled) }
                 ))
-                .toggleStyle(.checkbox)
+                .platformToggleStyle()
                 Spacer()
                 TextField("Size", value: Binding(
                     get: { editModel.getValue("seedQueueSize", fallback: config.seedQueueSize) },
@@ -369,7 +369,7 @@ func queueManagementSection(config: TransmissionSessionResponseArguments, editMo
                     get: { editModel.getValue("seedRatioLimited", fallback: config.seedRatioLimited) },
                     set: { editModel.setValue("seedRatioLimited", $0, original: config.seedRatioLimited) }
                 ))
-                .toggleStyle(.checkbox)
+                .platformToggleStyle()
                 Spacer()
                 TextField("Ratio", value: Binding(
                     get: { editModel.getValue("seedRatioLimit", fallback: config.seedRatioLimit) },
@@ -402,7 +402,7 @@ func fileManagementSection(config: TransmissionSessionResponseArguments, editMod
                     get: { editModel.getValue("incompleteDirEnabled", fallback: config.incompleteDirEnabled) },
                     set: { editModel.setValue("incompleteDirEnabled", $0, original: config.incompleteDirEnabled) }
                 ))
-                .toggleStyle(.checkbox)
+                .platformToggleStyle()
             }
             
             VStack(alignment: .leading, spacing: 4) {
@@ -419,12 +419,23 @@ func fileManagementSection(config: TransmissionSessionResponseArguments, editMod
                 get: { editModel.getValue("startAddedTorrents", fallback: config.startAddedTorrents) },
                 set: { editModel.setValue("startAddedTorrents", $0, original: config.startAddedTorrents) }
             ))
-            .toggleStyle(.checkbox)
+            .platformToggleStyle()
         }
         .padding(10)
     }
 }
 
+
+// Platform-specific toggle styling
+extension View {
+    func platformToggleStyle() -> some View {
+        #if os(macOS)
+        self.toggleStyle(.checkbox)
+        #elseif os(iOS)
+        self.toggleStyle(.switch)
+        #endif
+    }
+}
 
 // Shared extension for creating a Binding<StartupConnectionBehavior> from a raw String binding
 extension Binding where Value == StartupConnectionBehavior {
