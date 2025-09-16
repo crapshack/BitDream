@@ -257,6 +257,81 @@ func speedLimitsSection(config: TransmissionSessionResponseArguments, editModel:
                     Text("KB/s")
                         .foregroundColor(.secondary)
                 }
+                
+                Divider()
+                    .padding(.vertical, 8)
+                
+                VStack(alignment: .leading, spacing: 12) {
+                    Toggle("Schedule alternate speeds", isOn: Binding(
+                        get: { editModel.getValue("altSpeedTimeEnabled", fallback: config.altSpeedTimeEnabled) },
+                        set: { editModel.setValue("altSpeedTimeEnabled", $0, original: config.altSpeedTimeEnabled) }
+                    ))
+                    .platformToggleStyle()
+                    
+                    HStack(spacing: 12) {
+                        Picker("", selection: Binding(
+                            get: { editModel.getValue("altSpeedTimeDay", fallback: config.altSpeedTimeDay) },
+                            set: { editModel.setValue("altSpeedTimeDay", $0, original: config.altSpeedTimeDay) }
+                        )) {
+                            // Transmission uses bitmask for days: Sunday=1, Monday=2, Tuesday=4, Wednesday=8, Thursday=16, Friday=32, Saturday=64
+                            Text("Every Day").tag(127)  // All days: 1+2+4+8+16+32+64
+                            Text("Weekdays").tag(62)   // Mon-Fri: 2+4+8+16+32
+                            Text("Weekends").tag(65)   // Sat+Sun: 64+1
+                            Divider()
+                            Text("Sunday").tag(1)
+                            Text("Monday").tag(2)
+                            Text("Tuesday").tag(4)
+                            Text("Wednesday").tag(8)
+                            Text("Thursday").tag(16)
+                            Text("Friday").tag(32)
+                            Text("Saturday").tag(64)
+                        }
+                        .pickerStyle(.menu)
+                        .disabled(!editModel.getValue("altSpeedTimeEnabled", fallback: config.altSpeedTimeEnabled))
+                        
+                        Text("from")
+                            .foregroundColor(.secondary)
+                        
+                        DatePicker("", selection: Binding(
+                            get: {
+                                let minutes = editModel.getValue("altSpeedTimeBegin", fallback: config.altSpeedTimeBegin)
+                                let calendar = Calendar.current
+                                return calendar.date(bySettingHour: minutes / 60, minute: minutes % 60, second: 0, of: Date()) ?? Date()
+                            },
+                            set: { date in
+                                let calendar = Calendar.current
+                                let components = calendar.dateComponents([.hour, .minute], from: date)
+                                let minutes = (components.hour ?? 0) * 60 + (components.minute ?? 0)
+                                editModel.setValue("altSpeedTimeBegin", minutes, original: config.altSpeedTimeBegin)
+                            }
+                        ), displayedComponents: .hourAndMinute)
+                        .datePickerStyle(.compact)
+                        .labelsHidden()
+                        .disabled(!editModel.getValue("altSpeedTimeEnabled", fallback: config.altSpeedTimeEnabled))
+                        
+                        Text("to")
+                            .foregroundColor(.secondary)
+                        
+                        DatePicker("", selection: Binding(
+                            get: {
+                                let minutes = editModel.getValue("altSpeedTimeEnd", fallback: config.altSpeedTimeEnd)
+                                let calendar = Calendar.current
+                                return calendar.date(bySettingHour: minutes / 60, minute: minutes % 60, second: 0, of: Date()) ?? Date()
+                            },
+                            set: { date in
+                                let calendar = Calendar.current
+                                let components = calendar.dateComponents([.hour, .minute], from: date)
+                                let minutes = (components.hour ?? 0) * 60 + (components.minute ?? 0)
+                                editModel.setValue("altSpeedTimeEnd", minutes, original: config.altSpeedTimeEnd)
+                            }
+                        ), displayedComponents: .hourAndMinute)
+                        .datePickerStyle(.compact)
+                        .labelsHidden()
+                        .disabled(!editModel.getValue("altSpeedTimeEnabled", fallback: config.altSpeedTimeEnabled))
+                        
+                        Spacer()
+                    }
+                }
             }
         }
         .padding(16)
@@ -371,7 +446,7 @@ func networkSection(config: TransmissionSessionResponseArguments, editModel: Ses
                 }
                 
                 HStack {
-                    Text("Maximum peers per torrent")
+                    Text("Maximum per torrent peers")
                     Spacer()
                     TextField("", value: Binding(
                         get: { editModel.getValue("peerLimitPerTorrent", fallback: config.peerLimitPerTorrent) },
@@ -379,6 +454,42 @@ func networkSection(config: TransmissionSessionResponseArguments, editModel: Ses
                     ), format: .number.grouping(.never))
                     .frame(width: 60)
                     .textFieldStyle(.roundedBorder)
+                }
+            }
+            
+            Divider()
+                .padding(.vertical, 4)
+            
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Blocklist")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .padding(.bottom, 4)
+                
+                Toggle("Enable blocklist", isOn: Binding(
+                    get: { editModel.getValue("blocklistEnabled", fallback: config.blocklistEnabled) },
+                    set: { editModel.setValue("blocklistEnabled", $0, original: config.blocklistEnabled) }
+                ))
+                .platformToggleStyle()
+                
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Blocklist URL")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    TextField("URL", text: Binding(
+                        get: { editModel.getValue("blocklistUrl", fallback: config.blocklistUrl) },
+                        set: { editModel.setValue("blocklistUrl", $0, original: config.blocklistUrl) }
+                    ))
+                    .textFieldStyle(.roundedBorder)
+                    .disabled(!editModel.getValue("blocklistEnabled", fallback: config.blocklistEnabled))
+                }
+                
+                HStack {
+                    Text("Blocklist rules active")
+                    Spacer()
+                    Text("\(config.blocklistSize)")
+                        .foregroundColor(.secondary)
+                        .font(.system(.body, design: .monospaced))
                 }
             }
         }
@@ -485,10 +596,40 @@ func fileManagementSection(config: TransmissionSessionResponseArguments, editMod
             ))
             .platformToggleStyle()
             
-            Toggle("Append .part to incomplete files", isOn: Binding(
+            Toggle(isOn: Binding(
+                get: { editModel.getValue("trashOriginalTorrentFiles", fallback: config.trashOriginalTorrentFiles) },
+                set: { editModel.setValue("trashOriginalTorrentFiles", $0, original: config.trashOriginalTorrentFiles) }
+            )) {
+                HStack(spacing: 0) {
+                    Text("Delete original ")
+                    Text(".torrent")
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal, 3)
+                        .padding(.vertical, 1)
+                        .background(Color.secondary.opacity(0.15))
+                        .cornerRadius(2)
+                    Text(" files")
+                }
+            }
+            .platformToggleStyle()
+            
+            Toggle(isOn: Binding(
                 get: { editModel.getValue("renamePartialFiles", fallback: config.renamePartialFiles) },
                 set: { editModel.setValue("renamePartialFiles", $0, original: config.renamePartialFiles) }
-            ))
+            )) {
+                HStack(spacing: 0) {
+                    Text("Append ")
+                    Text(".part")
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal, 3)
+                        .padding(.vertical, 1)
+                        .background(Color.secondary.opacity(0.15))
+                        .cornerRadius(2)
+                    Text(" to incomplete files")
+                }
+            }
             .platformToggleStyle()
         }
         .padding(16)
@@ -510,7 +651,7 @@ func seedingSection(config: TransmissionSessionResponseArguments, editModel: Ses
                     get: { editModel.getValue("seedRatioLimit", fallback: config.seedRatioLimit) },
                     set: { editModel.setValue("seedRatioLimit", $0, original: config.seedRatioLimit) }
                 ), format: .number.precision(.fractionLength(2)))
-                .frame(width: 80)
+                .frame(width: 60)
                 .textFieldStyle(.roundedBorder)
                 .disabled(!editModel.getValue("seedRatioLimited", fallback: config.seedRatioLimited))
             }
@@ -557,6 +698,8 @@ extension Binding where Value == StartupConnectionBehavior {
         )
     }
 }
+
+
 
 #Preview {
     SettingsView(store: Store())

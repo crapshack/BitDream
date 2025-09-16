@@ -399,11 +399,16 @@ public struct TransmissionSessionResponseArguments: Codable, Hashable {
     public let altSpeedDown: Int64
     public let altSpeedUp: Int64
     public let altSpeedEnabled: Bool
+    public let altSpeedTimeBegin: Int
+    public let altSpeedTimeEnd: Int
+    public let altSpeedTimeEnabled: Bool
+    public let altSpeedTimeDay: Int
     
     // File Management
     public let incompleteDir: String
     public let incompleteDirEnabled: Bool
     public let startAddedTorrents: Bool
+    public let trashOriginalTorrentFiles: Bool
     public let renamePartialFiles: Bool
     
     // Queue Management
@@ -430,6 +435,11 @@ public struct TransmissionSessionResponseArguments: Codable, Hashable {
     public let peerLimitGlobal: Int
     public let peerLimitPerTorrent: Int
     
+    // Blocklist
+    public let blocklistEnabled: Bool
+    public let blocklistSize: Int
+    public let blocklistUrl: String
+    
     public init(
         downloadDir: String,
         version: String,
@@ -440,9 +450,14 @@ public struct TransmissionSessionResponseArguments: Codable, Hashable {
         altSpeedDown: Int64,
         altSpeedUp: Int64,
         altSpeedEnabled: Bool,
+        altSpeedTimeBegin: Int,
+        altSpeedTimeEnd: Int,
+        altSpeedTimeEnabled: Bool,
+        altSpeedTimeDay: Int,
         incompleteDir: String,
         incompleteDirEnabled: Bool,
         startAddedTorrents: Bool,
+        trashOriginalTorrentFiles: Bool,
         renamePartialFiles: Bool,
         downloadQueueEnabled: Bool,
         downloadQueueSize: Int,
@@ -463,7 +478,10 @@ public struct TransmissionSessionResponseArguments: Codable, Hashable {
         encryption: String,
         utpEnabled: Bool,
         peerLimitGlobal: Int,
-        peerLimitPerTorrent: Int
+        peerLimitPerTorrent: Int,
+        blocklistEnabled: Bool,
+        blocklistSize: Int,
+        blocklistUrl: String
     ) {
         self.downloadDir = downloadDir
         self.version = version
@@ -474,9 +492,14 @@ public struct TransmissionSessionResponseArguments: Codable, Hashable {
         self.altSpeedDown = altSpeedDown
         self.altSpeedUp = altSpeedUp
         self.altSpeedEnabled = altSpeedEnabled
+        self.altSpeedTimeBegin = altSpeedTimeBegin
+        self.altSpeedTimeEnd = altSpeedTimeEnd
+        self.altSpeedTimeEnabled = altSpeedTimeEnabled
+        self.altSpeedTimeDay = altSpeedTimeDay
         self.incompleteDir = incompleteDir
         self.incompleteDirEnabled = incompleteDirEnabled
         self.startAddedTorrents = startAddedTorrents
+        self.trashOriginalTorrentFiles = trashOriginalTorrentFiles
         self.renamePartialFiles = renamePartialFiles
         self.downloadQueueEnabled = downloadQueueEnabled
         self.downloadQueueSize = downloadQueueSize
@@ -498,6 +521,9 @@ public struct TransmissionSessionResponseArguments: Codable, Hashable {
         self.utpEnabled = utpEnabled
         self.peerLimitGlobal = peerLimitGlobal
         self.peerLimitPerTorrent = peerLimitPerTorrent
+        self.blocklistEnabled = blocklistEnabled
+        self.blocklistSize = blocklistSize
+        self.blocklistUrl = blocklistUrl
     }
     
     enum CodingKeys: String, CodingKey {
@@ -510,9 +536,14 @@ public struct TransmissionSessionResponseArguments: Codable, Hashable {
         case altSpeedDown = "alt-speed-down"
         case altSpeedUp = "alt-speed-up"
         case altSpeedEnabled = "alt-speed-enabled"
+        case altSpeedTimeBegin = "alt-speed-time-begin"
+        case altSpeedTimeEnd = "alt-speed-time-end"
+        case altSpeedTimeEnabled = "alt-speed-time-enabled"
+        case altSpeedTimeDay = "alt-speed-time-day"
         case incompleteDir = "incomplete-dir"
         case incompleteDirEnabled = "incomplete-dir-enabled"
         case startAddedTorrents = "start-added-torrents"
+        case trashOriginalTorrentFiles = "trash-original-torrent-files"
         case renamePartialFiles = "rename-partial-files"
         case downloadQueueEnabled = "download-queue-enabled"
         case downloadQueueSize = "download-queue-size"
@@ -534,6 +565,9 @@ public struct TransmissionSessionResponseArguments: Codable, Hashable {
         case utpEnabled = "utp-enabled"
         case peerLimitGlobal = "peer-limit-global"
         case peerLimitPerTorrent = "peer-limit-per-torrent"
+        case blocklistEnabled = "blocklist-enabled"
+        case blocklistSize = "blocklist-size"
+        case blocklistUrl = "blocklist-url"
     }
 }
 

@@ -336,10 +336,15 @@ public func getSession(config: TransmissionConfig, auth: TransmissionAuth, onRes
         "alt-speed-down",
         "alt-speed-up",
         "alt-speed-enabled",
+        "alt-speed-time-begin",
+        "alt-speed-time-end",
+        "alt-speed-time-enabled",
+        "alt-speed-time-day",
         // File Management
         "incomplete-dir",
         "incomplete-dir-enabled",
         "start-added-torrents",
+        "trash-original-torrent-files",
         "rename-partial-files",
         // Queue Management
         "download-queue-enabled",
@@ -363,7 +368,11 @@ public func getSession(config: TransmissionConfig, auth: TransmissionAuth, onRes
         "encryption",
         "utp-enabled",
         "peer-limit-global",
-        "peer-limit-per-torrent"
+        "peer-limit-per-torrent",
+        // Blocklist
+        "blocklist-enabled",
+        "blocklist-size",
+        "blocklist-url"
     ]
     
     performTransmissionDataRequest(
