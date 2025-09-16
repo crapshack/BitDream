@@ -672,3 +672,32 @@ public func setSession(
         completion: completion
     )
 }
+
+// MARK: - Utility Functions
+
+/// Check free space available in a directory
+/// - Parameters:
+///   - path: The directory path to check
+///   - config: Server configuration
+///   - auth: Authentication credentials
+///   - completion: Result containing free space info or error
+public func checkFreeSpace(
+    path: String,
+    config: TransmissionConfig,
+    auth: TransmissionAuth,
+    completion: @escaping (Result<FreeSpaceResponse, Error>) -> Void
+) {
+    performTransmissionDataRequest(
+        method: "free-space",
+        args: ["path": path] as [String: String],
+        config: config,
+        auth: auth
+    ) { (result: Result<TransmissionGenericResponse<FreeSpaceResponse>, Error>) in
+        switch result {
+        case .success(let response):
+            completion(.success(response.arguments))
+        case .failure(let error):
+            completion(.failure(error))
+        }
+    }
+}

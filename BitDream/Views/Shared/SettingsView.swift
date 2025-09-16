@@ -48,11 +48,16 @@ struct SettingsView: View {
 
 class SessionSettingsEditModel: ObservableObject {
     @Published var values: [String: Any] = [:]
+    @Published var freeSpaceInfo: String?
+    @Published var isCheckingSpace = false
     private var saveTimer: Timer?
-    private var store: Store?
+    var store: Store?
     
     func setup(store: Store) {
         self.store = store
+        // Clear free space info when switching servers
+        freeSpaceInfo = nil
+        isCheckingSpace = false
     }
     
     func setValue<T>(_ key: String, _ value: T, original: T) where T: Equatable {
@@ -567,11 +572,33 @@ func fileManagementSection(config: TransmissionSessionResponseArguments, editMod
                 Text("Download Directory")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
-                TextField("Path", text: Binding(
-                    get: { editModel.getValue("downloadDir", fallback: config.downloadDir) },
-                    set: { editModel.setValue("downloadDir", $0, original: config.downloadDir) }
-                ))
-                .textFieldStyle(.roundedBorder)
+                HStack {
+                    TextField("Path", text: Binding(
+                        get: { editModel.getValue("downloadDir", fallback: config.downloadDir) },
+                        set: { editModel.setValue("downloadDir", $0, original: config.downloadDir) }
+                    ))
+                    .textFieldStyle(.roundedBorder)
+                    
+                    Button("Check Space") {
+                        checkDirectoryFreeSpace(
+                            path: editModel.getValue("downloadDir", fallback: config.downloadDir),
+                            editModel: editModel
+                        )
+                    }
+                }
+                if let freeSpaceInfo = editModel.freeSpaceInfo {
+                    HStack(spacing: 6) {
+                        Text(freeSpaceInfo)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        
+                        if editModel.isCheckingSpace {
+                            ProgressView()
+                                .scaleEffect(0.3)
+                                .frame(width: 8, height: 8)
+                        }
+                    }
+                }
             }
             
             VStack(alignment: .leading, spacing: 12) {
@@ -700,6 +727,41 @@ extension Binding where Value == StartupConnectionBehavior {
 }
 
 
+
+// MARK: - Helper Functions
+
+func checkDirectoryFreeSpace(path: String, editModel: SessionSettingsEditModel) {
+    guard let store = editModel.store,
+          let serverInfo = store.currentServerInfo else { return }
+    
+    editModel.isCheckingSpace = true
+    
+    // Only show "Checking..." if we don't have previous results
+    if editModel.freeSpaceInfo == nil {
+        editModel.freeSpaceInfo = "Checking..."
+    }
+    
+    checkFreeSpace(
+        path: path,
+        config: serverInfo.config,
+        auth: serverInfo.auth
+    ) { result in
+        DispatchQueue.main.async {
+            editModel.isCheckingSpace = false
+            switch result {
+            case .success(let response):
+                let formatter = ByteCountFormatter()
+                formatter.countStyle = .binary
+                let freeSpace = formatter.string(fromByteCount: response.sizeBytes)
+                let totalSpace = formatter.string(fromByteCount: response.totalSize)
+                let percentUsed = 100.0 - (Double(response.sizeBytes) / Double(response.totalSize) * 100.0)
+                editModel.freeSpaceInfo = "Free: \(freeSpace) of \(totalSpace) (\(String(format: "%.1f", percentUsed))% used)"
+            case .failure(let error):
+                editModel.freeSpaceInfo = "Error: \(error.localizedDescription)"
+            }
+        }
+    }
+}
 
 #Preview {
     SettingsView(store: Store())

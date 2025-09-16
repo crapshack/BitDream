@@ -578,6 +578,19 @@ public struct TorrentRenameResponseArgs: Codable {
     public let id: Int
 }
 
+/// Response for free-space method
+public struct FreeSpaceResponse: Codable {
+    public let path: String
+    public let sizeBytes: Int64
+    public let totalSize: Int64
+    
+    enum CodingKeys: String, CodingKey {
+        case path
+        case sizeBytes = "size-bytes"
+        case totalSize = "total_size"
+    }
+}
+
 // MARK: - Session Set Request Models
 
 /// Request arguments for session-set method
