@@ -43,7 +43,6 @@ struct macOSSettingsView: View {
                                     }
                                 }
                                 .pickerStyle(.menu)
-                                .frame(width: 120)
                             }
                             
                             // Accent color
@@ -62,7 +61,6 @@ struct macOSSettingsView: View {
                                     }
                                 }
                                 .pickerStyle(.menu)
-                                .frame(width: 120)
                             }
                             
                             // Color preview
@@ -108,7 +106,6 @@ struct macOSSettingsView: View {
                                     Text("Default server").tag(StartupConnectionBehavior.defaultServer)
                                 }
                                 .pickerStyle(.menu)
-                                .frame(width: 160)
                             }
                             .help("Choose which server BitDream connects to when it launches.")
                             
@@ -121,7 +118,6 @@ struct macOSSettingsView: View {
                                     }
                                 }
                                 .pickerStyle(.menu)
-                                .frame(width: 120)
                             }
                         }
                         
