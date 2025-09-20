@@ -10,7 +10,7 @@ struct LinearTorrentProgressStyle: ProgressViewStyle {
     let trackOpacity: Double
     let height: CGFloat
 
-    init(color: Color, trackOpacity: Double = 0.25, height: CGFloat = 8) {
+    init(color: Color, trackOpacity: Double = 0.25, height: CGFloat = 6) {
         self.color = color
         self.trackOpacity = trackOpacity
         self.height = height
