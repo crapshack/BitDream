@@ -140,7 +140,7 @@ struct macOSTorrentListCompact: View {
             TableColumn("Progress", value: \.progress) { row in
                 HStack(spacing: 4) {
                     ProgressView(value: row.torrent.metadataPercentComplete < 1 ? 1 : row.progress)
-                        .tint(progressColorForTorrent(row.torrent))
+                        .progressViewStyle(LinearTorrentProgressStyle(color: progressColorForTorrent(row.torrent)))
                         .frame(height: 6)
                     
                     Text(String(format: "%.1f%%", row.progress * 100))

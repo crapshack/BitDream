@@ -4,6 +4,35 @@ import KeychainAccess
 
 #if os(macOS)
 
+// MARK: - macOS-only Linear Progress Style (native look, custom color)
+struct LinearTorrentProgressStyle: ProgressViewStyle {
+    let color: Color
+    let trackOpacity: Double
+    let height: CGFloat
+
+    init(color: Color, trackOpacity: Double = 0.25, height: CGFloat = 8) {
+        self.color = color
+        self.trackOpacity = trackOpacity
+        self.height = height
+    }
+
+    func makeBody(configuration: Configuration) -> some View {
+        GeometryReader { geometry in
+            let fractionCompleted = max(0, min(1, configuration.fractionCompleted ?? 0))
+            ZStack(alignment: .leading) {
+                RoundedRectangle(cornerRadius: height / 2)
+                    .fill(Color.secondary.opacity(trackOpacity))
+
+                RoundedRectangle(cornerRadius: height / 2)
+                    .fill(color)
+                    .frame(width: geometry.size.width * CGFloat(fractionCompleted))
+            }
+        }
+        .frame(height: height)
+        .padding(.vertical, 2)
+    }
+}
+
 // MARK: - Shared Components for macOS Torrent List Views
 
 // MARK: - Torrent Row Modifier
