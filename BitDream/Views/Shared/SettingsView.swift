@@ -557,34 +557,34 @@ func networkSection(config: TransmissionSessionResponseArguments, editModel: Ses
                 }
             }
             
-            Divider()
-                .padding(.vertical, 4)
+            // Divider()
+            //     .padding(.vertical, 4)
             
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Default Public Trackers")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .padding(.bottom, 4)
+            // VStack(alignment: .leading, spacing: 12) {
+            //     Text("Default Public Trackers")
+            //         .font(.subheadline)
+            //         .foregroundColor(.secondary)
+            //         .padding(.bottom, 4)
                 
-                Text("Trackers added to all public torrents")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+            //     Text("Trackers added to all public torrents")
+            //         .font(.caption)
+            //         .foregroundColor(.secondary)
                 
-                TextEditor(text: Binding(
-                    get: { editModel.getValue("defaultTrackers", fallback: config.defaultTrackers) },
-                    set: { editModel.setValue("defaultTrackers", $0, original: config.defaultTrackers) }
-                ))
-                .font(.system(.caption, design: .monospaced))
-                .frame(minHeight: 80)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 4)
-                        .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
-                )
+            //     TextEditor(text: Binding(
+            //         get: { editModel.getValue("defaultTrackers", fallback: config.defaultTrackers) },
+            //         set: { editModel.setValue("defaultTrackers", $0, original: config.defaultTrackers) }
+            //     ))
+            //     .font(.system(.caption, design: .monospaced))
+            //     .frame(minHeight: 80)
+            //     .overlay(
+            //         RoundedRectangle(cornerRadius: 4)
+            //             .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+            //     )
                 
-                Text("To add a backup URL, add it on the next line after a primary URL.\nTo add a new primary URL, add it after a blank line.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
+            //     Text("To add a backup URL, add it on the next line after a primary URL.\nTo add a new primary URL, add it after a blank line.")
+            //         .font(.caption)
+            //         .foregroundColor(.secondary)
+            // }
         }
         .padding(16)
     }
