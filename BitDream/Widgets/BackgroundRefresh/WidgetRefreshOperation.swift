@@ -5,6 +5,14 @@ import CoreData
 import KeychainAccess
 import WidgetKit
 
+private let widgetRefreshQueue: OperationQueue = {
+    let queue = OperationQueue()
+    queue.name = "com.bitdream.widgetRefreshQueue"
+    queue.maxConcurrentOperationCount = 1
+    queue.qualityOfService = .utility
+    return queue
+}()
+
 /// Shared operation that fetches data for all servers and writes widget snapshots.
 /// Concurrency: Runs on an `OperationQueue`, confines mutable state to the operation's
 /// execution context, and uses a private Core Data background context.
@@ -94,6 +102,7 @@ final class WidgetRefreshOperation: Operation, @unchecked Sendable {
 /// Convenience function to perform a widget refresh operation
 func performWidgetRefresh(completion: (() -> Void)? = nil) {
     let operation = WidgetRefreshOperation()
+    operation.qualityOfService = .utility
     
     operation.completionBlock = {
         DispatchQueue.main.async {
@@ -101,5 +110,11 @@ func performWidgetRefresh(completion: (() -> Void)? = nil) {
         }
     }
     
-    OperationQueue().addOperation(operation)
+    WidgetRefreshOperation.enqueue(operation)
+}
+
+extension WidgetRefreshOperation {
+    static func enqueue(_ operation: WidgetRefreshOperation) {
+        widgetRefreshQueue.addOperation(operation)
+    }
 }

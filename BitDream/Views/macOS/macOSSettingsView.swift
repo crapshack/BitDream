@@ -246,213 +246,82 @@ struct macOSSettingsView: View {
 func torrentsTabContent(config: TransmissionSessionResponseArguments, editModel: SessionSettingsEditModel) -> some View {
     GroupBox {
         VStack(alignment: .leading, spacing: 16) {
+            // File Management
             VStack(alignment: .leading, spacing: 12) {
                 Text("File Management")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .padding(.bottom, 4)
-                
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Download Directory")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    HStack {
-                        TextField("Path", text: Binding(
-                            get: { editModel.getValue("downloadDir", fallback: config.downloadDir) },
-                            set: { editModel.setValue("downloadDir", $0, original: config.downloadDir) }
-                        ))
-                        .textFieldStyle(.roundedBorder)
-                        
-                        Button("Check Space") {
-                            checkDirectoryFreeSpace(
-                                path: editModel.getValue("downloadDir", fallback: config.downloadDir),
-                                editModel: editModel
-                            )
-                        }
-                    }
-                    if let freeSpaceInfo = editModel.freeSpaceInfo {
-                        HStack(spacing: 6) {
-                            Text(freeSpaceInfo)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            
-                            if editModel.isCheckingSpace {
-                                ProgressView()
-                                    .scaleEffect(0.3)
-                                    .frame(width: 8, height: 8)
-                            }
-                        }
-                    }
-                }
-                
-                VStack(alignment: .leading, spacing: 12) {
-                    Toggle("Use separate incomplete directory", isOn: Binding(
-                        get: { editModel.getValue("incompleteDirEnabled", fallback: config.incompleteDirEnabled) },
-                        set: { editModel.setValue("incompleteDirEnabled", $0, original: config.incompleteDirEnabled) }
-                    ))
-                    .toggleStyle(.checkbox)
-                    
-                    TextField("Incomplete directory path", text: Binding(
-                        get: { editModel.getValue("incompleteDir", fallback: config.incompleteDir) },
-                        set: { editModel.setValue("incompleteDir", $0, original: config.incompleteDir) }
-                    ))
-                    .textFieldStyle(.roundedBorder)
-                    .disabled(!editModel.getValue("incompleteDirEnabled", fallback: config.incompleteDirEnabled))
-                    .padding(.leading, 20)
-                }
-                
-                Toggle("Start transfers when added", isOn: Binding(
-                    get: { editModel.getValue("startAddedTorrents", fallback: config.startAddedTorrents) },
-                    set: { editModel.setValue("startAddedTorrents", $0, original: config.startAddedTorrents) }
-                ))
-                .toggleStyle(.checkbox)
-                
-                Toggle(isOn: Binding(
-                    get: { editModel.getValue("trashOriginalTorrentFiles", fallback: config.trashOriginalTorrentFiles) },
-                    set: { editModel.setValue("trashOriginalTorrentFiles", $0, original: config.trashOriginalTorrentFiles) }
-                )) {
-                    HStack(spacing: 0) {
-                        Text("Delete original ")
-                        Text(".torrent")
-                            .font(.system(.caption, design: .monospaced))
-                            .foregroundColor(.secondary)
-                            .padding(.horizontal, 3)
-                            .padding(.vertical, 1)
-                            .background(Color.secondary.opacity(0.15))
-                            .cornerRadius(2)
-                        Text(" files")
-                    }
-                }
-                .toggleStyle(.checkbox)
-                
-                Toggle(isOn: Binding(
-                    get: { editModel.getValue("renamePartialFiles", fallback: config.renamePartialFiles) },
-                    set: { editModel.setValue("renamePartialFiles", $0, original: config.renamePartialFiles) }
-                )) {
-                    HStack(spacing: 0) {
-                        Text("Append ")
-                        Text(".part")
-                            .font(.system(.caption, design: .monospaced))
-                            .foregroundColor(.secondary)
-                            .padding(.horizontal, 3)
-                            .padding(.vertical, 1)
-                            .background(Color.secondary.opacity(0.15))
-                            .cornerRadius(2)
-                        Text(" to incomplete files")
-                    }
-                }
-                .toggleStyle(.checkbox)
+                FileManagementContent(config: config, editModel: editModel)
             }
             
             Divider()
                 .padding(.vertical, 4)
             
+            // Queue Management
             VStack(alignment: .leading, spacing: 12) {
                 Text("Queue Management")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .padding(.bottom, 4)
-                
-                HStack {
-                    Toggle("Download queue size", isOn: Binding(
-                        get: { editModel.getValue("downloadQueueEnabled", fallback: config.downloadQueueEnabled) },
-                        set: { editModel.setValue("downloadQueueEnabled", $0, original: config.downloadQueueEnabled) }
-                    ))
-                    .toggleStyle(.checkbox)
-                    Spacer()
-                    TextField("", value: Binding(
-                        get: { editModel.getValue("downloadQueueSize", fallback: config.downloadQueueSize) },
-                        set: { editModel.setValue("downloadQueueSize", $0, original: config.downloadQueueSize) }
-                    ), format: .number)
-                    .frame(width: 60)
-                    .textFieldStyle(.roundedBorder)
-                    .disabled(!editModel.getValue("downloadQueueEnabled", fallback: config.downloadQueueEnabled))
-                    Text("active downloads")
-                        .foregroundColor(.secondary)
-                }
-                
-                HStack {
-                    Toggle("Seed queue size", isOn: Binding(
-                        get: { editModel.getValue("seedQueueEnabled", fallback: config.seedQueueEnabled) },
-                        set: { editModel.setValue("seedQueueEnabled", $0, original: config.seedQueueEnabled) }
-                    ))
-                    .toggleStyle(.checkbox)
-                    Spacer()
-                    TextField("", value: Binding(
-                        get: { editModel.getValue("seedQueueSize", fallback: config.seedQueueSize) },
-                        set: { editModel.setValue("seedQueueSize", $0, original: config.seedQueueSize) }
-                    ), format: .number)
-                    .frame(width: 60)
-                    .textFieldStyle(.roundedBorder)
-                    .disabled(!editModel.getValue("seedQueueEnabled", fallback: config.seedQueueEnabled))
-                    Text("active seeds")
-                        .foregroundColor(.secondary)
-                }
-                
-                HStack {
-                    Toggle("Consider idle torrents as stalled after", isOn: Binding(
-                        get: { editModel.getValue("queueStalledEnabled", fallback: config.queueStalledEnabled) },
-                        set: { editModel.setValue("queueStalledEnabled", $0, original: config.queueStalledEnabled) }
-                    ))
-                    .toggleStyle(.checkbox)
-                    Spacer()
-                    TextField("", value: Binding(
-                        get: { editModel.getValue("queueStalledMinutes", fallback: config.queueStalledMinutes) },
-                        set: { editModel.setValue("queueStalledMinutes", $0, original: config.queueStalledMinutes) }
-                    ), format: .number)
-                    .frame(width: 50)
-                    .textFieldStyle(.roundedBorder)
-                    .disabled(!editModel.getValue("queueStalledEnabled", fallback: config.queueStalledEnabled))
-                    Text("minutes")
-                        .foregroundColor(.secondary)
-                }
+                QueueManagementContent(config: config, editModel: editModel)
             }
             
             Divider()
                 .padding(.vertical, 4)
             
+            // Seeding
             VStack(alignment: .leading, spacing: 12) {
                 Text("Seeding")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .padding(.bottom, 4)
-                
-                HStack {
-                    Toggle("Stop seeding at ratio", isOn: Binding(
-                        get: { editModel.getValue("seedRatioLimited", fallback: config.seedRatioLimited) },
-                        set: { editModel.setValue("seedRatioLimited", $0, original: config.seedRatioLimited) }
-                    ))
-                    .toggleStyle(.checkbox)
-                    Spacer()
-                    TextField("", value: Binding(
-                        get: { editModel.getValue("seedRatioLimit", fallback: config.seedRatioLimit) },
-                        set: { editModel.setValue("seedRatioLimit", $0, original: config.seedRatioLimit) }
-                    ), format: .number.precision(.fractionLength(2)))
-                    .frame(width: 60)
-                    .textFieldStyle(.roundedBorder)
-                    .disabled(!editModel.getValue("seedRatioLimited", fallback: config.seedRatioLimited))
-                }
-                
-                HStack {
-                    Toggle("Stop seeding when inactive for", isOn: Binding(
-                        get: { editModel.getValue("idleSeedingLimitEnabled", fallback: config.idleSeedingLimitEnabled) },
-                        set: { editModel.setValue("idleSeedingLimitEnabled", $0, original: config.idleSeedingLimitEnabled) }
-                    ))
-                    .toggleStyle(.checkbox)
-                    Spacer()
-                    TextField("", value: Binding(
-                        get: { editModel.getValue("idleSeedingLimit", fallback: config.idleSeedingLimit) },
-                        set: { editModel.setValue("idleSeedingLimit", $0, original: config.idleSeedingLimit) }
-                    ), format: .number)
-                    .frame(width: 50)
-                    .textFieldStyle(.roundedBorder)
-                    .disabled(!editModel.getValue("idleSeedingLimitEnabled", fallback: config.idleSeedingLimitEnabled))
-                    Text("minutes")
-                        .foregroundColor(.secondary)
-                }
+                SeedingContent(config: config, editModel: editModel)
             }
         }
         .padding(16)
+    }
+}
+
+// MARK: - macOS Wrappers for Shared Content
+
+@ViewBuilder
+func speedLimitsSection(config: TransmissionSessionResponseArguments, editModel: SessionSettingsEditModel) -> some View {
+    GroupBox {
+        SpeedLimitsContent(config: config, editModel: editModel)
+            .padding(16)
+    }
+}
+
+@ViewBuilder
+func networkSection(config: TransmissionSessionResponseArguments, editModel: SessionSettingsEditModel) -> some View {
+    GroupBox {
+        NetworkContent(config: config, editModel: editModel)
+            .padding(16)
+    }
+}
+
+@ViewBuilder
+func fileManagementSection(config: TransmissionSessionResponseArguments, editModel: SessionSettingsEditModel) -> some View {
+    GroupBox(label: Text("File Management").font(.headline)) {
+        FileManagementContent(config: config, editModel: editModel)
+            .padding(16)
+    }
+}
+
+@ViewBuilder
+func queueManagementSection(config: TransmissionSessionResponseArguments, editModel: SessionSettingsEditModel) -> some View {
+    GroupBox(label: Text("Queue Management").font(.headline)) {
+        QueueManagementContent(config: config, editModel: editModel)
+            .padding(16)
+    }
+}
+
+@ViewBuilder
+func seedingSection(config: TransmissionSessionResponseArguments, editModel: SessionSettingsEditModel) -> some View {
+    GroupBox(label: Text("Seeding").font(.headline)) {
+        SeedingContent(config: config, editModel: editModel)
+            .padding(16)
     }
 }
 

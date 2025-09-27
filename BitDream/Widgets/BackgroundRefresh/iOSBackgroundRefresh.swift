@@ -31,6 +31,7 @@ enum BackgroundRefreshManager {
         schedule() // schedule the next one ASAP to keep cadence
 
         let operation = WidgetRefreshOperation()
+        operation.qualityOfService = .utility
 
         task.expirationHandler = {
             operation.cancel()
@@ -41,7 +42,7 @@ enum BackgroundRefreshManager {
             task.setTaskCompleted(success: success)
         }
 
-        OperationQueue().addOperation(operation)
+        WidgetRefreshOperation.enqueue(operation)
     }
 }
 #endif
