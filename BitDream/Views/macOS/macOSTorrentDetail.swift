@@ -15,6 +15,9 @@ struct macOSTorrentDetail: View {
     @State public var files: [TorrentFile] = []
     @State private var fileStats: [TorrentFileStats] = []
     @State private var isShowingFilesSheet = false
+    @State private var peers: [Peer] = []
+    @State private var peersFrom: PeersFrom? = nil
+    @State private var isShowingPeersSheet = false
     @State private var showingDeleteConfirmation = false
     @State private var showingDeleteError = false
     @State private var deleteErrorMessage = ""
@@ -56,6 +59,22 @@ struct macOSTorrentDetail: View {
                             }
                             .buttonStyle(.bordered)
                             .help("View files in this torrent")
+                        }
+                        
+                        DetailRow(label: "Peers") {
+                            Button {
+                                isShowingPeersSheet = true
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "person.2")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(.accentColor)
+                                    Text("\(peers.count)")
+                                        .foregroundColor(.accentColor)
+                                }
+                            }
+                            .buttonStyle(.bordered)
+                            .help("View peers for this torrent")
                         }
                     }
                     .padding(.vertical, 16)
@@ -163,11 +182,33 @@ struct macOSTorrentDetail: View {
             }
             .frame(minWidth: 1000, minHeight: 800)
         }
+        .sheet(isPresented: $isShowingPeersSheet) {
+            macOSTorrentPeerDetail(
+                torrentName: torrent.name,
+                torrentId: torrent.id,
+                store: store,
+                peers: peers,
+                peersFrom: peersFrom,
+                onRefresh: {
+                    fetchTorrentPeers(transferId: torrent.id, store: store) { fetchedPeers, fetchedFrom in
+                        peers = fetchedPeers
+                        peersFrom = fetchedFrom
+                    }
+                },
+                onDone: { isShowingPeersSheet = false }
+            )
+            .frame(minWidth: 1000, minHeight: 700)
+        }
         .onAppear{
             // Use shared function to fetch files
             fetchTorrentFiles(transferId: torrent.id, store: store) { fetchedFiles, fetchedStats in
                 files = fetchedFiles
                 fileStats = fetchedStats
+            }
+            // Fetch peers initially
+            fetchTorrentPeers(transferId: torrent.id, store: store) { fetchedPeers, fetchedFrom in
+                peers = fetchedPeers
+                peersFrom = fetchedFrom
             }
         }
         .toolbar {

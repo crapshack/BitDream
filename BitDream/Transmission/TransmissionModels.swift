@@ -767,3 +767,48 @@ public struct BlocklistUpdateResponse: Codable {
         case blocklistSize = "blocklist-size"
     }
 }
+
+// MARK: - Peer Models
+
+/// Represents a single peer returned by torrent-get `peers`
+public struct Peer: Codable, Identifiable, Hashable {
+    public var id: String { "\(address):\(port)" }
+    public let address: String
+    public let clientName: String
+    public let clientIsChoked: Bool
+    public let clientIsInterested: Bool
+    public let flagStr: String
+    public let isDownloadingFrom: Bool
+    public let isEncrypted: Bool
+    public let isIncoming: Bool
+    public let isUploadingTo: Bool
+    public let isUTP: Bool
+    public let peerIsChoked: Bool
+    public let peerIsInterested: Bool
+    public let port: Int
+    public let progress: Double
+    public let rateToClient: Int64?
+    public let rateToPeer: Int64?
+}
+
+/// Breakdown of where peers were discovered from, returned by torrent-get `peersFrom`
+public struct PeersFrom: Codable, Hashable {
+    public let fromCache: Int
+    public let fromDht: Int
+    public let fromIncoming: Int
+    public let fromLpd: Int
+    public let fromLtep: Int
+    public let fromPex: Int
+    public let fromTracker: Int
+}
+
+/// Response object for peers inside torrents list
+public struct TorrentPeersResponseData: Codable {
+    public let peers: [Peer]
+    public let peersFrom: PeersFrom?
+}
+
+/// Response wrapper for torrent peers `torrent-get` response
+public struct TorrentPeersResponseTorrents: Codable {
+    public let torrents: [TorrentPeersResponseData]
+}

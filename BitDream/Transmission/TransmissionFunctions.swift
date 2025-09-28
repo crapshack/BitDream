@@ -777,3 +777,39 @@ public func updateBlocklist(
         }
     }
 }
+
+// MARK: - Peer Queries
+
+/// Gets the list of peers (and peersFrom breakdown) for a torrent
+/// - Parameters:
+///   - transferId: The ID of the torrent
+///   - info: Tuple containing server config and auth info
+///   - onReceived: Callback providing peers and optional peersFrom breakdown
+public func getTorrentPeers(
+    transferId: Int,
+    info: (config: TransmissionConfig, auth: TransmissionAuth),
+    onReceived: @escaping (_ peers: [Peer], _ peersFrom: PeersFrom?) -> Void
+) {
+    let args = TorrentFilesRequestArgs(
+        fields: ["peers", "peersFrom"],
+        ids: [transferId]
+    )
+    
+    performTransmissionDataRequest(
+        method: "torrent-get",
+        args: args,
+        config: info.config,
+        auth: info.auth
+    ) { (result: Result<TransmissionGenericResponse<TorrentPeersResponseTorrents>, Error>) in
+        switch result {
+        case .success(let response):
+            if let peersData = response.arguments.torrents.first {
+                onReceived(peersData.peers, peersData.peersFrom)
+            } else {
+                onReceived([], nil)
+            }
+        case .failure(_):
+            onReceived([], nil)
+        }
+    }
+}
