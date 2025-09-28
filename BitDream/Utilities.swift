@@ -246,7 +246,7 @@ func refreshTransmissionData(store: Store) {
     
     let info = makeConfig(store: store)
     // also reset default download directory when new host is set
-    getSession(config: info.config, auth: info.auth) { sessionInfo in
+    getSession(config: info.config, auth: info.auth, onResponse: { sessionInfo in
         DispatchQueue.main.async {
             store.defaultDownloadDir = sessionInfo.downloadDir
             
@@ -256,7 +256,9 @@ func refreshTransmissionData(store: Store) {
                 try? PersistenceController.shared.container.viewContext.save()
             }
         }
-    }
+    }, onError: { error in
+        print("Failed to get session info: \(error)")
+    })
     // Also refresh servers index for widgets
     writeServersIndex(store: store)
 }

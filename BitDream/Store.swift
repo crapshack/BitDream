@@ -57,6 +57,8 @@ class Store: NSObject, ObservableObject {
     @Published var showConnectionErrorAlert: Bool = false
     @Published var isEditingServerSettings: Bool = false  // Flag to pause reconnection attempts
     
+    @Published var sessionConfiguration: TransmissionSessionResponseArguments?
+    
     @Published var pollInterval: Double = AppDefaults.pollInterval // Default poll interval in seconds
     @Published var shouldActivateSearch: Bool = false
     @Published var shouldToggleInspector: Bool = false
@@ -162,15 +164,21 @@ class Store: NSObject, ObservableObject {
         self.host = host
         
         // Get server version and download directory
-        getSession(config: config, auth: auth) { sessionInfo in
+        getSession(config: config, auth: auth, onResponse: { sessionInfo in
             DispatchQueue.main.async {
                 self.defaultDownloadDir = sessionInfo.downloadDir
+                self.sessionConfiguration = sessionInfo
                 
                 // Store the version in CoreData
                 host.version = sessionInfo.version
                 try? PersistenceController.shared.container.viewContext.save()
             }
-        }
+        }, onError: { error in
+            print("Failed to get session info: \(error)")
+            DispatchQueue.main.async {
+                self.sessionConfiguration = nil
+            }
+        })
         
         // Clear torrents before refreshing to ensure list resets to top
         self.torrents = []
@@ -225,6 +233,26 @@ class Store: NSObject, ObservableObject {
             // Try to reconnect to the current host
             self.setHost(host: host)
         }
+    }
+    
+    // Computed property to provide current server info for session-set calls
+    var currentServerInfo: (config: TransmissionConfig, auth: TransmissionAuth)? {
+        guard let server = self.server else { return nil }
+        return (config: server.config, auth: server.auth)
+    }
+    
+    // Method to refresh session configuration after settings changes
+    func refreshSessionConfiguration() {
+        guard let serverInfo = currentServerInfo else { return }
+        
+        getSession(config: serverInfo.config, auth: serverInfo.auth, onResponse: { sessionInfo in
+            DispatchQueue.main.async {
+                self.sessionConfiguration = sessionInfo
+                self.defaultDownloadDir = sessionInfo.downloadDir
+            }
+        }, onError: { error in
+            print("Failed to refresh session info: \(error)")
+        })
     }
     
     // Method to handle connection errors

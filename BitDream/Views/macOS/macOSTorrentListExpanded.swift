@@ -50,7 +50,7 @@ struct macOSTorrentListExpanded: View {
                 // Logic here is kind of funky, but we are going to fill up the entire progress bar if the
                 // torrent is still retrieving metadata (as the bar will be colored red)
                 ProgressView(value: torrent.metadataPercentComplete < 1 ? 1 : torrent.percentDone)
-                    .tint(progressColorForTorrent(torrent))
+                    .progressViewStyle(LinearTorrentProgressStyle(color: progressColorForTorrent(torrent)))
                 
                 Text(formatTorrentSubtext(torrent))
                     .font(.custom("sub", size: 10))

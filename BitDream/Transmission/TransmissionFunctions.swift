@@ -319,22 +319,75 @@ public struct SessionInfo {
     }
 }
 
-/// Get the server's session information including download directory and version
+/// Get the server's session configuration and information
 /// - Parameter config: The server's config
 /// - Parameter auth: The username and password for the server
 /// - Parameter onResponse: An escaping function that receives session information from the server
-public func getSession(config: TransmissionConfig, auth: TransmissionAuth, onResponse: @escaping (TransmissionSessionResponseArguments) -> Void) {
+public func getSession(config: TransmissionConfig, auth: TransmissionAuth, onResponse: @escaping (TransmissionSessionResponseArguments) -> Void, onError: @escaping (String) -> Void) {
+    let fields = [
+        // Existing fields
+        "download-dir",
+        "version",
+        // Speed & Bandwidth
+        "speed-limit-down",
+        "speed-limit-down-enabled",
+        "speed-limit-up",
+        "speed-limit-up-enabled",
+        "alt-speed-down",
+        "alt-speed-up",
+        "alt-speed-enabled",
+        "alt-speed-time-begin",
+        "alt-speed-time-end",
+        "alt-speed-time-enabled",
+        "alt-speed-time-day",
+        // File Management
+        "incomplete-dir",
+        "incomplete-dir-enabled",
+        "start-added-torrents",
+        "trash-original-torrent-files",
+        "rename-partial-files",
+        // Queue Management
+        "download-queue-enabled",
+        "download-queue-size",
+        // Seeding
+        "seed-queue-enabled",
+        "seed-queue-size",
+        "seedRatioLimited",
+        "seedRatioLimit",
+        "idle-seeding-limit",
+        "idle-seeding-limit-enabled",
+        "queue-stalled-enabled",
+        "queue-stalled-minutes",
+        // Network Settings
+        "peer-port",
+        "peer-port-random-on-start",
+        "port-forwarding-enabled",
+        "dht-enabled",
+        "pex-enabled",
+        "lpd-enabled",
+        "encryption",
+        "utp-enabled",
+        "peer-limit-global",
+        "peer-limit-per-torrent",
+        // Blocklist
+        "blocklist-enabled",
+        "blocklist-size",
+        "blocklist-url",
+        // Default Trackers
+        "default-trackers"
+    ]
+    
     performTransmissionDataRequest(
         method: "session-get",
-        args: ["fields": ["download-dir", "version"]] as StringListArguments,
+        args: ["fields": fields] as StringListArguments,
         config: config,
         auth: auth
     ) { (result: Result<TransmissionGenericResponse<TransmissionSessionResponseArguments>, Error>) in
         switch result {
         case .success(let response):
             onResponse(response.arguments)
-        case .failure(_):
-            onResponse(TransmissionSessionResponseArguments())
+        case .failure(let error):
+            onError(error.localizedDescription)
         }
     }
 }
@@ -597,4 +650,109 @@ public func queueMoveBottom(
         auth: info.auth,
         completion: completion
     )
+}
+
+// MARK: - Session Configuration Functions
+
+/// Update session configuration settings using the session-set method
+/// - Parameters:
+///   - args: TransmissionSessionSetRequestArgs containing the properties to update
+///   - config: Server configuration
+///   - auth: Authentication credentials
+///   - completion: Called when the server's response is received
+public func setSession(
+    args: TransmissionSessionSetRequestArgs,
+    config: TransmissionConfig,
+    auth: TransmissionAuth,
+    completion: @escaping (TransmissionResponse) -> Void
+) {
+    performTransmissionStatusRequest(
+        method: "session-set",
+        args: args,
+        config: config,
+        auth: auth,
+        completion: completion
+    )
+}
+
+// MARK: - Utility Functions
+
+/// Check free space available in a directory
+/// - Parameters:
+///   - path: The directory path to check
+///   - config: Server configuration
+///   - auth: Authentication credentials
+///   - completion: Result containing free space info or error
+public func checkFreeSpace(
+    path: String,
+    config: TransmissionConfig,
+    auth: TransmissionAuth,
+    completion: @escaping (Result<FreeSpaceResponse, Error>) -> Void
+) {
+    performTransmissionDataRequest(
+        method: "free-space",
+        args: ["path": path] as [String: String],
+        config: config,
+        auth: auth
+    ) { (result: Result<TransmissionGenericResponse<FreeSpaceResponse>, Error>) in
+        switch result {
+        case .success(let response):
+            completion(.success(response.arguments))
+        case .failure(let error):
+            completion(.failure(error))
+        }
+    }
+}
+
+/// Test if the peer listening port is accessible from the outside world
+/// - Parameters:
+///   - ipProtocol: Optional IP protocol to test ("ipv4" or "ipv6"). If nil, uses OS default.
+///   - config: Server configuration
+///   - auth: Authentication credentials
+///   - completion: Result containing port test response or error
+public func testPort(
+    ipProtocol: String? = nil,
+    config: TransmissionConfig,
+    auth: TransmissionAuth,
+    completion: @escaping (Result<PortTestResponse, Error>) -> Void
+) {
+    let args = PortTestRequestArgs(ipProtocol: ipProtocol)
+    performTransmissionDataRequest(
+        method: "port-test",
+        args: args,
+        config: config,
+        auth: auth
+    ) { (result: Result<TransmissionGenericResponse<PortTestResponse>, Error>) in
+        switch result {
+        case .success(let response):
+            completion(.success(response.arguments))
+        case .failure(let error):
+            completion(.failure(error))
+        }
+    }
+}
+
+/// Update the blocklist from the configured blocklist URL
+/// - Parameters:
+///   - config: Server configuration
+///   - auth: Authentication credentials
+///   - completion: Result containing the new blocklist size or error
+public func updateBlocklist(
+    config: TransmissionConfig,
+    auth: TransmissionAuth,
+    completion: @escaping (Result<BlocklistUpdateResponse, Error>) -> Void
+) {
+    performTransmissionDataRequest(
+        method: "blocklist-update",
+        args: EmptyArguments(),
+        config: config,
+        auth: auth
+    ) { (result: Result<TransmissionGenericResponse<BlocklistUpdateResponse>, Error>) in
+        switch result {
+        case .success(let response):
+            completion(.success(response.arguments))
+        case .failure(let error):
+            completion(.failure(error))
+        }
+    }
 }
