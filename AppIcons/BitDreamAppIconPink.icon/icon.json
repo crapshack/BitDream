@@ -6,13 +6,10 @@
     {
       "layers" : [
         {
-          "blend-mode" : "normal",
-          "fill" : "automatic",
-          "glass" : false,
+          "glass" : true,
           "hidden" : false,
-          "image-name" : "clouds-blue.png",
-          "name" : "clouds-blue",
-          "opacity" : 1,
+          "image-name" : "clouds-pink.png",
+          "name" : "clouds-pink",
           "position" : {
             "scale" : 3.5,
             "translation-in-points" : [
