@@ -53,6 +53,7 @@
 		4BC5C2B32D7D415100D80AB4 /* macOSTorrentDetail.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BC5C2B22D7D415100D80AB4 /* macOSTorrentDetail.swift */; };
 		4BC5C2B42D7D415100D80AB4 /* iOSTorrentDetail.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BC5C2B12D7D415100D80AB4 /* iOSTorrentDetail.swift */; };
 		4BC6F24B2E89F8510037DFDF /* PiecesGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BC6F24A2E89F8510037DFDF /* PiecesGridView.swift */; };
+		4BC6F24D2E8A069F0037DFDF /* BitDreamAppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 4BC6F24C2E8A069F0037DFDF /* BitDreamAppIcon.icon */; };
 		4BCF274F2E774EDC00F6BF76 /* DataWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BCF274E2E774EDC00F6BF76 /* DataWriter.swift */; };
 		4BCF27502E774EDC00F6BF76 /* DataModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BCF274D2E774EDC00F6BF76 /* DataModels.swift */; };
 		4BCF27512E774F3E00F6BF76 /* DataModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BCF274D2E774EDC00F6BF76 /* DataModels.swift */; };
@@ -143,6 +144,7 @@
 		4BC5C2B12D7D415100D80AB4 /* iOSTorrentDetail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iOSTorrentDetail.swift; sourceTree = "<group>"; };
 		4BC5C2B22D7D415100D80AB4 /* macOSTorrentDetail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = macOSTorrentDetail.swift; sourceTree = "<group>"; };
 		4BC6F24A2E89F8510037DFDF /* PiecesGridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PiecesGridView.swift; sourceTree = "<group>"; };
+		4BC6F24C2E8A069F0037DFDF /* BitDreamAppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = BitDreamAppIcon.icon; sourceTree = "<group>"; };
 		4BCF274D2E774EDC00F6BF76 /* DataModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataModels.swift; sourceTree = "<group>"; };
 		4BCF274E2E774EDC00F6BF76 /* DataWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataWriter.swift; sourceTree = "<group>"; };
 		4BD855492E77424B00606224 /* WidgetKitBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetKitBridge.swift; sourceTree = "<group>"; };
@@ -204,6 +206,7 @@
 				4BDACD1A2E73DB220074F714 /* BitDreamWidgets */,
 				4BDACD152E73DB220074F714 /* Frameworks */,
 				4B1DADDC295E6C440037E9FB /* Products */,
+				4BC6F24C2E8A069F0037DFDF /* BitDreamAppIcon.icon */,
 			);
 			sourceTree = "<group>";
 		};
@@ -451,6 +454,7 @@
 			files = (
 				4B1DADEC295E6C450037E9FB /* Preview Assets.xcassets in Resources */,
 				4B1DADE8295E6C450037E9FB /* Assets.xcassets in Resources */,
+				4BC6F24D2E8A069F0037DFDF /* BitDreamAppIcon.icon in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -661,7 +665,7 @@
 		4B1DADF0295E6C450037E9FB /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = BitDreamAppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_ENTITLEMENTS = BitDream/BitDream.entitlements;
@@ -705,7 +709,7 @@
 		4B1DADF1295E6C450037E9FB /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = BitDreamAppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_ENTITLEMENTS = BitDream/BitDream.entitlements;
