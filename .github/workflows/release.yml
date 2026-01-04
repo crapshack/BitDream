@@ -23,11 +23,18 @@ jobs:
             -destination "generic/platform=macOS" \
             -archivePath build/BitDream.xcarchive \
             -configuration Release \
-            CODE_SIGN_IDENTITY="-" \
-            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY=- \
             MACOSX_DEPLOYMENT_TARGET=15.0 \
-            ARCHS=arm64 \
-            ONLY_ACTIVE_ARCH=NO
+            ARCHS=arm64
+
+      - name: Debug - Check app contents
+        run: |
+          echo "=== App bundle contents ==="
+          ls -la build/BitDream.xcarchive/Products/Applications/BitDream.app/Contents/
+          echo "=== Resources ==="
+          ls -la build/BitDream.xcarchive/Products/Applications/BitDream.app/Contents/Resources/ || echo "No Resources folder"
+          echo "=== Looking for icon files ==="
+          find build/BitDream.xcarchive/Products/Applications/BitDream.app -name "*.icns" -o -name "AppIcon*" 2>/dev/null || echo "No icons found"
 
       - name: Create DMG
         run: |
