@@ -24,7 +24,6 @@ jobs:
             -archivePath build/BitDream.xcarchive \
             -configuration Release \
             CODE_SIGN_IDENTITY=- \
-            MACOSX_DEPLOYMENT_TARGET=15.0 \
             ARCHS=arm64
 
       - name: Debug - Check app contents
