@@ -4,11 +4,11 @@ import KeychainAccess
 
 #if os(macOS)
 
-// MARK: - Table Row Data Model with Binding Support
+// MARK: - Table Row Data Model
 struct TorrentTableRow: Identifiable, Hashable {
     let id: Int
-    @Binding var torrent: Torrent
-    
+    let torrent: Torrent
+
     // Computed properties for sorting
     var name: String { torrent.name }
     var status: String { torrent.statusCalc.rawValue }
@@ -19,15 +19,14 @@ struct TorrentTableRow: Identifiable, Hashable {
     var uploadSpeed: Int64 { torrent.rateUpload }
     var eta: Int { torrent.eta }
     var labels: [String] { torrent.labels }
-    
-    init(torrent: Binding<Torrent>) {
-        self.id = torrent.wrappedValue.id
-        self._torrent = torrent
+
+    init(torrent: Torrent) {
+        self.id = torrent.id
+        self.torrent = torrent
     }
-    
+
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
-        // Include key properties that change to ensure proper updates
         hasher.combine(torrent.name)
         hasher.combine(torrent.labels)
         hasher.combine(torrent.status)
@@ -36,7 +35,7 @@ struct TorrentTableRow: Identifiable, Hashable {
         hasher.combine(torrent.rateUpload)
         hasher.combine(torrent.eta)
     }
-    
+
     static func == (lhs: TorrentTableRow, rhs: TorrentTableRow) -> Bool {
         lhs.id == rhs.id &&
         lhs.torrent.name == rhs.torrent.name &&
@@ -74,36 +73,18 @@ struct macOSTorrentListCompact: View {
     @AppStorage(Self.columnCustomizationKey) private var columnCustomizationData: Data?
     
     
-    // Create bindings to the actual torrents in the store (like expanded view does)
     private var rows: [TorrentTableRow] {
-        torrents.compactMap { torrent in
-            // Find the actual torrent in the store and create a binding to it
-            if let storeIndex = store.torrents.firstIndex(where: { $0.id == torrent.id }) {
-                let binding = Binding<Torrent>(
-                    get: { store.torrents[storeIndex] },
-                    set: { store.torrents[storeIndex] = $0 }
-                )
-                return TorrentTableRow(torrent: binding)
-            }
-            return nil
-        }
+        torrents.map { TorrentTableRow(torrent: $0) }
     }
-    
+
     private var sortedRows: [TorrentTableRow] {
         rows.sorted(using: sortOrder)
     }
-    
-    private var selectedTorrents: Binding<Set<Torrent>> {
-        Binding<Set<Torrent>>(
-            get: {
-                Set(selection.compactMap { id in
-                    store.torrents.first { $0.id == id }
-                })
-            },
-            set: { newSelection in
-                selection = Set(newSelection.map { $0.id })
-            }
-        )
+
+    private var selectedTorrentsSet: Set<Torrent> {
+        Set(selection.compactMap { id in
+            store.torrents.first { $0.id == id }
+        })
     }
     
     var body: some View {

@@ -13,13 +13,13 @@ import CoreData
 struct TorrentDetail: View {
     @ObservedObject var store: Store
     var viewContext: NSManagedObjectContext
-    @Binding var torrent: Torrent
-    
+    var torrent: Torrent
+
     var body: some View {
         #if os(iOS)
-        iOSTorrentDetail(store: store, viewContext: viewContext, torrent: $torrent)
+        iOSTorrentDetail(store: store, viewContext: viewContext, torrent: torrent)
         #elseif os(macOS)
-        macOSTorrentDetail(store: store, viewContext: viewContext, torrent: $torrent)
+        macOSTorrentDetail(store: store, viewContext: viewContext, torrent: torrent)
         #endif
     }
 }
@@ -134,13 +134,14 @@ struct TorrentDetailHeaderView: View {
 struct TorrentDetailToolbar: ToolbarContent {
     var torrent: Torrent
     var store: Store
-    
+
     var body: some ToolbarContent {
         #if os(macOS)
         ToolbarItem {
+            // In detail view, actions apply to the displayed torrent
             TorrentActionsToolbarMenu(
                 store: store,
-                selectedTorrents: store.selectedTorrents
+                selectedTorrents: Set([torrent])
             )
         }
         #else

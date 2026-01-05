@@ -6,10 +6,10 @@ import CoreData
 #if os(iOS)
 struct iOSTorrentDetail: View {
     @Environment(\.dismiss) private var dismiss
-    
+
     @ObservedObject var store: Store
     var viewContext: NSManagedObjectContext
-    @Binding var torrent: Torrent
+    var torrent: Torrent
     
     @State public var files: [TorrentFile] = []
     @State public var fileStats: [TorrentFileStats] = []
@@ -229,14 +229,8 @@ struct DetailViewLabelTag: View {
 struct iOSTorrentDetail: View {
     @ObservedObject var store: Store
     var viewContext: NSManagedObjectContext
-    @Binding var torrent: Torrent
-    
-    init(store: Store, viewContext: NSManagedObjectContext, torrent: Binding<Torrent>) {
-        self.store = store
-        self.viewContext = viewContext
-        self._torrent = torrent
-    }
-    
+    var torrent: Torrent
+
     var body: some View {
         EmptyView()
     }

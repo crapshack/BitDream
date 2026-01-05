@@ -4,11 +4,11 @@ import KeychainAccess
 
 #if os(macOS)
 struct macOSTorrentListExpanded: View {
-    @Binding var torrent: Torrent
+    var torrent: Torrent
     var store: Store
-    @Binding var selectedTorrents: Set<Torrent>
+    var selectedTorrents: Set<Torrent>
     var showContentTypeIcons: Bool
-    
+
     @State var deleteDialog: Bool = false
     @State var labelDialog: Bool = false
     @State var labelInput: String = ""
@@ -19,7 +19,7 @@ struct macOSTorrentListExpanded: View {
     @State private var showingError = false
     @State private var errorMessage = ""
     @Environment(\.colorScheme) var colorScheme
-    
+
     var body: some View {
         HStack(spacing: 12) {
             // Icon column (conditional) - spans full row height
@@ -29,7 +29,7 @@ struct macOSTorrentListExpanded: View {
                     .foregroundColor(.secondary.opacity(0.6))
                     .frame(width: 20, height: 20)
             }
-            
+
             // Content column - all the text content
             VStack(spacing: 4) {
                 HStack(spacing: 8) {
@@ -37,21 +37,21 @@ struct macOSTorrentListExpanded: View {
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .layoutPriority(1)
-                    
+
                     // Display labels inline if present, but allow them to be truncated
                     createLabelTagsView(for: torrent)
                 }
-                
+
                 createStatusView(for: torrent)
                     .font(.custom("sub", size: 10))
                     .frame(maxWidth: .infinity, alignment: .topLeading)
                     .foregroundColor(.secondary)
-                
+
                 // Logic here is kind of funky, but we are going to fill up the entire progress bar if the
                 // torrent is still retrieving metadata (as the bar will be colored red)
                 ProgressView(value: torrent.metadataPercentComplete < 1 ? 1 : torrent.percentDone)
                     .progressViewStyle(LinearTorrentProgressStyle(color: progressColorForTorrent(torrent)))
-                
+
                 Text(formatTorrentSubtext(torrent))
                     .font(.custom("sub", size: 10))
                     .fixedSize(horizontal: false, vertical: true)
@@ -62,8 +62,8 @@ struct macOSTorrentListExpanded: View {
         .contentShape(Rectangle())
         .padding([.top, .bottom, .leading, .trailing], 10)
         .modifier(TorrentRowModifier(
-            torrent: $torrent,
-            selectedTorrents: $selectedTorrents,
+            torrent: torrent,
+            selectedTorrents: selectedTorrents,
             store: store,
             deleteDialog: $deleteDialog,
             labelDialog: $labelDialog,
@@ -81,11 +81,11 @@ struct macOSTorrentListExpanded: View {
 #else
 // Empty struct for iOS to reference
 struct macOSTorrentListExpanded: View {
-    @Binding var torrent: Torrent
+    var torrent: Torrent
     var store: Store
-    @Binding var selectedTorrents: Set<Torrent>
+    var selectedTorrents: Set<Torrent>
     var showContentTypeIcons: Bool
-    
+
     var body: some View {
         EmptyView()
     }

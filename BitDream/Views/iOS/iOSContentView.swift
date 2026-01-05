@@ -18,21 +18,14 @@ struct iOSContentView: View {
 
     private var keychain = Keychain(service: "crapshack.BitDream")
     
-    // Store the selected torrent IDs instead of a single ID
+    // Store the selected torrent IDs
     @State private var selectedTorrentIds: Set<Int> = []
-    
+
     // Computed property to get the selected torrents from the IDs
-    private var torrentSelection: Binding<Set<Torrent>> {
-        Binding<Set<Torrent>>(
-            get: {
-                Set(selectedTorrentIds.compactMap { id in
-                    store.torrents.first { $0.id == id }
-                })
-            },
-            set: { newSelection in
-                selectedTorrentIds = Set(newSelection.map { $0.id })
-            }
-        )
+    private var selectedTorrentsSet: Set<Torrent> {
+        Set(selectedTorrentIds.compactMap { id in
+            store.torrents.first { $0.id == id }
+        })
     }
     
     @State var sortProperty: SortProperty = UserDefaults.standard.sortProperty
@@ -47,7 +40,7 @@ struct iOSContentView: View {
                 StatsHeaderView(store: store)
                 
                 // Show list regardless of connection status
-                List(selection: torrentSelection) {
+                List(selection: $selectedTorrentIds) {
                     torrentRows
                 }
                 .listStyle(PlainListStyle())
@@ -86,8 +79,8 @@ struct iOSContentView: View {
                 Text(store.connectionErrorMessage)
             }
         } detail: {
-            if let selectedTorrent = torrentSelection.wrappedValue.first {
-                TorrentDetail(store: store, viewContext: viewContext, torrent: binding(for: selectedTorrent, in: store))
+            if let selectedTorrent = selectedTorrentsSet.first {
+                TorrentDetail(store: store, viewContext: viewContext, torrent: selectedTorrent)
             } else {
                 Text("Select a Dream")
             }
@@ -129,13 +122,12 @@ struct iOSContentView: View {
                 let sortedTorrents = sortTorrents(filteredBySearch, by: sortProperty, order: sortOrder)
                 ForEach(sortedTorrents, id: \.id) { torrent in
                     TorrentListRow(
-                        torrent: binding(for: torrent, in: store),
+                        torrent: torrent,
                         store: store,
-                        selectedTorrents: torrentSelection,
+                        selectedTorrents: selectedTorrentsSet,
                         showContentTypeIcons: showContentTypeIcons
                     )
-                    .tag(torrent)
-                    .id(torrent.id)
+                    .tag(torrent.id)
                     .listRowSeparator(.visible)
                 }
             }

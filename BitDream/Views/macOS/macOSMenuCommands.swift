@@ -8,10 +8,30 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-// Search Commands for menu and keyboard shortcut
+#if os(macOS)
+
+// MARK: - Focused Value Keys for Selection State
+
+/// Key for passing selected torrents to menu commands via SwiftUI's focused value system.
+/// This is the proper pattern for communicating view state (selection) to menu commands
+/// without using @Published state which can cause "Publishing changes from within view updates" warnings.
+struct SelectedTorrentsKey: FocusedValueKey {
+    typealias Value = Binding<Set<Int>>
+}
+
+extension FocusedValues {
+    /// The currently selected torrent IDs, exposed via focused value for menu commands.
+    var selectedTorrentIds: Binding<Set<Int>>? {
+        get { self[SelectedTorrentsKey.self] }
+        set { self[SelectedTorrentsKey.self] = newValue }
+    }
+}
+
+// MARK: - Search Commands
+
 struct SearchCommands: Commands {
     @ObservedObject var store: Store
-    
+
     var body: some Commands {
         CommandGroup(after: .textEditing) {
             Divider()
@@ -25,38 +45,40 @@ struct SearchCommands: Commands {
     }
 }
 
-// File Commands for file-related actions
+// MARK: - File Commands
+
 struct FileCommands: Commands {
     @ObservedObject var store: Store
-    
+    @FocusedBinding(\.selectedTorrentIds) private var selectedTorrentIds: Set<Int>?
+
+    private var selectedTorrents: Set<Torrent> {
+        guard let ids = selectedTorrentIds else { return [] }
+        return Set(ids.compactMap { id in
+            store.torrents.first { $0.id == id }
+        })
+    }
+
     var body: some Commands {
         CommandGroup(after: .newItem) {
             Button(action: {
-                #if os(macOS)
                 store.presentGlobalTorrentFileImporter = true
-                #else
-                store.isShowingAddAlert.toggle()
-                #endif
             }) {
                 Label("Add Torrent from File…", systemImage: "doc.badge.plus")
             }
             .keyboardShortcut("o", modifiers: .command)
 
             Button(action: {
-                #if os(macOS)
                 store.addTorrentInitialMode = .magnet
-                #endif
                 store.isShowingAddAlert.toggle()
             }) {
                 Label("Add Torrent from Magnet Link…", systemImage: "link.badge.plus")
             }
             .keyboardShortcut("o", modifiers: [.option, .command])
-            
-            #if os(macOS)
+
             Divider()
-            
+
             Button(action: {
-                if let firstTorrent = store.selectedTorrents.first {
+                if let firstTorrent = selectedTorrents.first {
                     store.globalRenameInput = firstTorrent.name
                     store.globalRenameTargetId = firstTorrent.id
                     store.showGlobalRenameDialog = true
@@ -64,88 +86,91 @@ struct FileCommands: Commands {
             }) {
                 Label("Rename…", systemImage: "pencil")
             }
-            .disabled(store.selectedTorrents.count != 1)
-            #endif
+            .disabled(selectedTorrents.count != 1)
         }
     }
 }
 
-#if os(macOS)
-// Torrent Commands for macOS torrent management
+// MARK: - Torrent Commands
+
 struct TorrentCommands: Commands {
     @ObservedObject var store: Store
-    
+    @FocusedBinding(\.selectedTorrentIds) private var selectedTorrentIds: Set<Int>?
+
+    private var selectedTorrents: Set<Torrent> {
+        guard let ids = selectedTorrentIds else { return [] }
+        return Set(ids.compactMap { id in
+            store.torrents.first { $0.id == id }
+        })
+    }
+
     var body: some Commands {
         CommandMenu("Torrent") {
-            // Selected torrent actions
             Button(action: {
                 pauseSelectedTorrents()
             }) {
                 Label("Pause Selected", systemImage: "pause")
             }
             .keyboardShortcut(".", modifiers: .command)
-            .disabled(store.selectedTorrents.shouldDisablePause)
-            
+            .disabled(selectedTorrents.shouldDisablePause)
+
             Button(action: {
                 resumeSelectedTorrents()
             }) {
                 Label("Resume Selected", systemImage: "play")
             }
             .keyboardShortcut("/", modifiers: .command)
-            .disabled(store.selectedTorrents.shouldDisableResume)
-            
+            .disabled(selectedTorrents.shouldDisableResume)
+
             Button(action: {
                 resumeSelectedTorrentsNow()
             }) {
                 Label("Resume Selected Now", systemImage: "play.fill")
             }
-            .disabled(store.selectedTorrents.shouldDisableResume)
-            
+            .disabled(selectedTorrents.shouldDisableResume)
+
             Divider()
-            
-            // Remove action
+
             Button(action: {
                 store.showingMenuRemoveConfirmation = true
             }) {
                 Label("Remove…", systemImage: "trash")
             }
             .keyboardShortcut(.delete, modifiers: .command)
-            .disabled(store.selectedTorrents.isEmpty)
-            
+            .disabled(selectedTorrents.isEmpty)
+
             Divider()
-            
-            // Queue movement actions
+
             Button(action: {
                 moveSelectedTorrentsToFront()
             }) {
                 Label("Move to Front of Queue", systemImage: "arrow.up.to.line")
             }
-            .disabled(store.selectedTorrents.isEmpty)
-            
+            .disabled(selectedTorrents.isEmpty)
+
             Button(action: {
                 moveSelectedTorrentsUp()
             }) {
                 Label("Move Up in Queue", systemImage: "arrow.up")
             }
-            .disabled(store.selectedTorrents.isEmpty)
-            
+            .disabled(selectedTorrents.isEmpty)
+
             Button(action: {
                 moveSelectedTorrentsDown()
             }) {
                 Label("Move Down in Queue", systemImage: "arrow.down")
             }
-            .disabled(store.selectedTorrents.isEmpty)
-            
+            .disabled(selectedTorrents.isEmpty)
+
             Button(action: {
                 moveSelectedTorrentsToBack()
             }) {
                 Label("Move to Back of Queue", systemImage: "arrow.down.to.line")
             }
-            .disabled(store.selectedTorrents.isEmpty)
-            
+            .disabled(selectedTorrents.isEmpty)
+
             Divider()
-            
-            // All torrents actions
+
             Button(action: {
                 pauseAllTorrents()
             }) {
@@ -153,7 +178,7 @@ struct TorrentCommands: Commands {
             }
             .keyboardShortcut(".", modifiers: [.option, .command])
             .disabled(store.torrents.isEmpty)
-            
+
             Button(action: {
                 resumeAllTorrents()
             }) {
@@ -161,33 +186,31 @@ struct TorrentCommands: Commands {
             }
             .keyboardShortcut("/", modifiers: [.option, .command])
             .disabled(store.torrents.isEmpty)
-            
+
             Divider()
-            
-            // Ask for more peers action
+
             Button(action: {
                 reannounceSelectedTorrents()
             }) {
                 Label("Ask For More Peers", systemImage: "arrow.left.arrow.right")
             }
-            .disabled(store.selectedTorrents.isEmpty)
-            
-            // Verify action
+            .disabled(selectedTorrents.isEmpty)
+
             Button(action: {
                 verifySelectedTorrents()
             }) {
                 Label("Verify Local Data", systemImage: "checkmark.arrow.trianglehead.counterclockwise")
             }
-            .disabled(store.selectedTorrents.isEmpty)
+            .disabled(selectedTorrents.isEmpty)
         }
     }
-    
+
     // MARK: - Action Implementations
-    
+
     private func pauseSelectedTorrents() {
-        let selected = Array(store.selectedTorrents)
+        let selected = Array(selectedTorrents)
         guard !selected.isEmpty else { return }
-        
+
         let info = makeConfig(store: store)
         let ids = selected.map { $0.id }
 
@@ -204,11 +227,11 @@ struct TorrentCommands: Commands {
             )
         }
     }
-    
+
     private func resumeSelectedTorrents() {
-        let selected = Array(store.selectedTorrents)
+        let selected = Array(selectedTorrents)
         guard !selected.isEmpty else { return }
-        
+
         let info = makeConfig(store: store)
         let ids = selected.map { $0.id }
 
@@ -225,9 +248,9 @@ struct TorrentCommands: Commands {
             )
         }
     }
-    
+
     private func resumeSelectedTorrentsNow() {
-        let selected = Array(store.selectedTorrents)
+        let selected = Array(selectedTorrents)
         guard !selected.isEmpty else { return }
 
         for torrent in selected {
@@ -245,12 +268,12 @@ struct TorrentCommands: Commands {
             }
         }
     }
-    
+
     private func pauseAllTorrents() {
         guard !store.torrents.isEmpty else { return }
-        
+
         let info = makeConfig(store: store)
-        
+
         playPauseAllTorrents(start: false, info: info) { response in
             handleTransmissionResponse(response,
                 onSuccess: {},
@@ -264,12 +287,12 @@ struct TorrentCommands: Commands {
             )
         }
     }
-    
+
     private func resumeAllTorrents() {
         guard !store.torrents.isEmpty else { return }
-        
+
         let info = makeConfig(store: store)
-        
+
         playPauseAllTorrents(start: true, info: info) { response in
             handleTransmissionResponse(response,
                 onSuccess: {},
@@ -283,11 +306,11 @@ struct TorrentCommands: Commands {
             )
         }
     }
-    
+
     private func reannounceSelectedTorrents() {
-        let selected = Array(store.selectedTorrents)
+        let selected = Array(selectedTorrents)
         guard !selected.isEmpty else { return }
-        
+
         for torrent in selected {
             reAnnounceToTrackers(torrent: torrent, store: store) { response in
                 handleTransmissionResponse(response,
@@ -303,13 +326,13 @@ struct TorrentCommands: Commands {
             }
         }
     }
-    
+
     private func verifySelectedTorrents() {
-        let selected = Array(store.selectedTorrents)
+        let selected = Array(selectedTorrents)
         guard !selected.isEmpty else { return }
-        
+
         let info = makeConfig(store: store)
-        
+
         for torrent in selected {
             verifyTorrent(torrent: torrent, config: info.config, auth: info.auth) { response in
                 handleTransmissionResponse(response,
@@ -325,13 +348,13 @@ struct TorrentCommands: Commands {
             }
         }
     }
-    
-    // MARK: - Queue Movement Helper Functions
-    
+
+    // MARK: - Queue Movement
+
     private func moveSelectedTorrentsToFront() {
-        let selectedIds = Array(store.selectedTorrents.map { $0.id })
+        let selectedIds = Array(selectedTorrents.map { $0.id })
         guard !selectedIds.isEmpty else { return }
-        
+
         let info = makeConfig(store: store)
         queueMoveTop(ids: selectedIds, info: info) { response in
             handleTransmissionResponse(response,
@@ -346,11 +369,11 @@ struct TorrentCommands: Commands {
             )
         }
     }
-    
+
     private func moveSelectedTorrentsUp() {
-        let selectedIds = Array(store.selectedTorrents.map { $0.id })
+        let selectedIds = Array(selectedTorrents.map { $0.id })
         guard !selectedIds.isEmpty else { return }
-        
+
         let info = makeConfig(store: store)
         queueMoveUp(ids: selectedIds, info: info) { response in
             handleTransmissionResponse(response,
@@ -365,11 +388,11 @@ struct TorrentCommands: Commands {
             )
         }
     }
-    
+
     private func moveSelectedTorrentsDown() {
-        let selectedIds = Array(store.selectedTorrents.map { $0.id })
+        let selectedIds = Array(selectedTorrents.map { $0.id })
         guard !selectedIds.isEmpty else { return }
-        
+
         let info = makeConfig(store: store)
         queueMoveDown(ids: selectedIds, info: info) { response in
             handleTransmissionResponse(response,
@@ -384,11 +407,11 @@ struct TorrentCommands: Commands {
             )
         }
     }
-    
+
     private func moveSelectedTorrentsToBack() {
-        let selectedIds = Array(store.selectedTorrents.map { $0.id })
+        let selectedIds = Array(selectedTorrents.map { $0.id })
         guard !selectedIds.isEmpty else { return }
-        
+
         let info = makeConfig(store: store)
         queueMoveBottom(ids: selectedIds, info: info) { response in
             handleTransmissionResponse(response,
@@ -404,21 +427,21 @@ struct TorrentCommands: Commands {
         }
     }
 }
-#endif
 
-// View Commands for view-related toggles
+// MARK: - View Commands
+
 struct ViewCommands: Commands {
     @ObservedObject var store: Store
     @AppStorage(UserDefaultsKeys.torrentListCompactMode) private var isCompactMode: Bool = false
     @AppStorage(UserDefaultsKeys.showContentTypeIcons) private var showContentTypeIcons: Bool = true
-    
+
     var body: some Commands {
         CommandGroup(after: .toolbar) {
             Divider()
             Toggle(isOn: $isCompactMode) {
                 Label("Compact View", systemImage: "list.bullet")
             }
-            
+
             Toggle(isOn: $showContentTypeIcons) {
                 Label("Show File Type Icons", systemImage: "doc.richtext")
             }
@@ -426,12 +449,12 @@ struct ViewCommands: Commands {
     }
 }
 
-// Inspector Commands for panel visibility
+// MARK: - Inspector Commands
+
 struct InspectorCommands: Commands {
     @ObservedObject var store: Store
-    
+
     var body: some Commands {
-        // Panel Commands - group inspector with sidebar
         CommandGroup(after: .toolbar) {
             Divider()
             Button(action: {
@@ -444,13 +467,14 @@ struct InspectorCommands: Commands {
     }
 }
 
-// Appearance Commands for theme management
+// MARK: - Appearance Commands
+
 struct AppearanceCommands: Commands {
     @ObservedObject var themeManager: ThemeManager
     @Binding var showAppearanceHUD: Bool
     @Binding var appearanceHUDText: String
     @Binding var hideHUDWork: DispatchWorkItem?
-    
+
     var body: some Commands {
         CommandGroup(before: .sidebar) {
             Divider()
@@ -461,9 +485,9 @@ struct AppearanceCommands: Commands {
                     Label("Dark", systemImage: "moon").tag(ThemeMode.dark)
                 }
                 .pickerStyle(.inline)
-                
+
                 Divider()
-                
+
                 Button(action: {
                     themeManager.cycleThemeMode()
                     appearanceHUDText = "Appearance: \(themeManager.themeMode.rawValue)"
@@ -486,11 +510,11 @@ struct AppearanceCommands: Commands {
     }
 }
 
-#if os(macOS)
-// App Commands for About and app-related actions
+// MARK: - App Commands
+
 struct AppCommands: Commands {
     @Environment(\.openWindow) private var openWindow
-    
+
     var body: some Commands {
         CommandGroup(replacing: .appInfo) {
             Button(action: {
@@ -501,4 +525,5 @@ struct AppCommands: Commands {
         }
     }
 }
+
 #endif

@@ -38,8 +38,8 @@ struct LinearTorrentProgressStyle: ProgressViewStyle {
 // MARK: - Torrent Row Modifier
 // Shared modifier for handling torrent row interactions
 struct TorrentRowModifier: ViewModifier {
-    @Binding var torrent: Torrent
-    @Binding var selectedTorrents: Set<Torrent>
+    var torrent: Torrent
+    var selectedTorrents: Set<Torrent>
     let store: Store
     @Binding var deleteDialog: Bool
     @Binding var labelDialog: Bool
@@ -53,7 +53,7 @@ struct TorrentRowModifier: ViewModifier {
     @State private var moveDialog: Bool = false
     @State private var movePath: String = ""
     @State private var moveShouldMove: Bool = true
-    
+
     private var affectedTorrents: Set<Torrent> {
         if selectedTorrents.isEmpty {
             return Set([torrent])
@@ -705,11 +705,11 @@ struct MoveSheetContent: View {
 #else
 // Empty struct for iOS to reference - this won't be compiled on iOS but provides the type
 struct macOSTorrentListRow: View {
-    @Binding var torrent: Torrent
+    var torrent: Torrent
     var store: Store
-    @Binding var selectedTorrents: Set<Torrent>
+    var selectedTorrents: Set<Torrent>
     let isCompact: Bool
-    
+
     var body: some View {
         EmptyView()
     }

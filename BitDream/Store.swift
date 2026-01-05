@@ -63,10 +63,7 @@ class Store: NSObject, ObservableObject {
     @Published var shouldActivateSearch: Bool = false
     @Published var shouldToggleInspector: Bool = false
     @Published var isInspectorVisible: Bool = UserDefaults.standard.inspectorVisibility
-    
-    // Selection state for menu commands (macOS only)
-    @Published var selectedTorrentIds: Set<Int> = []
-    
+
 #if os(macOS)
     // Controls how the Add Torrent flow should start when invoked from menu
     @Published var addTorrentInitialMode: AddTorrentInitialMode? = nil
@@ -81,14 +78,7 @@ class Store: NSObject, ObservableObject {
     @Published var globalRenameInput: String = ""
     @Published var globalRenameTargetId: Int? = nil
 #endif
-    
-    // Computed property to get selected torrents
-    var selectedTorrents: Set<Torrent> {
-        Set(selectedTorrentIds.compactMap { id in
-            torrents.first { $0.id == id }
-        })
-    }
-    
+
     // Confirmation dialog state for menu remove command
     @Published var showingMenuRemoveConfirmation = false
     
@@ -206,17 +196,17 @@ class Store: NSObject, ObservableObject {
             if self.isEditingServerSettings {
                 return
             }
-            
+
             DispatchQueue.main.async {
                 updateList(store: self, update: { vals in
                     DispatchQueue.main.async {
-                        self.objectWillChange.send()
+                        // Setting @Published properties automatically triggers objectWillChange
                         self.torrents = vals
                     }
                 })
                 updateSessionStats(store: self, update: { vals in
                     DispatchQueue.main.async {
-                        self.objectWillChange.send()
+                        // Setting @Published properties automatically triggers objectWillChange
                         self.sessionStats = vals
                     }
                 })

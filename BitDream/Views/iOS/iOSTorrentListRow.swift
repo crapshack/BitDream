@@ -4,9 +4,9 @@ import KeychainAccess
 
 #if os(iOS)
 struct iOSTorrentListRow: View {
-    @Binding var torrent: Torrent
+    var torrent: Torrent
     var store: Store
-    @Binding var selectedTorrents: Set<Torrent>
+    var selectedTorrents: Set<Torrent>
     var showContentTypeIcons: Bool
     
     @State var deleteDialog: Bool = false
@@ -584,11 +584,11 @@ struct iOSLabelEditView: View {
 #else
 // Empty struct for macOS to reference - this won't be compiled on macOS but provides the type
 struct iOSTorrentListRow: View {
-    @Binding var torrent: Torrent
+    var torrent: Torrent
     var store: Store
-    @Binding var selectedTorrents: Set<Torrent>
+    var selectedTorrents: Set<Torrent>
     var showContentTypeIcons: Bool
-    
+
     var body: some View {
         EmptyView()
     }

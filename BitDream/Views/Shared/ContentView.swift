@@ -93,37 +93,6 @@ struct ContentView: View {
     }
 }
 
-// Helper function to create binding for a torrent
-func binding(for torrent: Torrent, in store: Store) -> Binding<Torrent> {
-    return Binding<Torrent>(
-        get: {
-            if let index = store.torrents.firstIndex(where: { $0.id == torrent.id }) {
-                return store.torrents[index]
-            }
-            return torrent
-        },
-        set: { newValue in
-            if let index = store.torrents.firstIndex(where: { $0.id == torrent.id }) {
-                store.torrents[index] = newValue
-            }
-        }
-    )
-}
-
-// Helper function to create an ID-based selection binding
-func createTorrentSelectionBinding(selectedId: Binding<Int?>, in store: Store) -> Binding<Torrent?> {
-    return Binding<Torrent?>(
-        get: {
-            if let id = selectedId.wrappedValue {
-                return store.torrents.first { $0.id == id }
-            }
-            return nil
-        },
-        set: { newValue in
-            selectedId.wrappedValue = newValue?.id
-        }
-    )
-}
 
 // Helper function to set up the host
 func setupHost(hosts: FetchedResults<Host>, store: Store) {

@@ -5,6 +5,9 @@ import CoreData
 import UniformTypeIdentifiers
 
 #if os(macOS)
+
+// MARK: - Main Content View
+
 struct macOSContentView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openSettings) private var openSettings
@@ -28,7 +31,11 @@ struct macOSContentView: View {
     @State private var showOnlyNoLabels: Bool = false
     @AppStorage(UserDefaultsKeys.torrentListCompactMode) private var isCompactMode: Bool = false
     @AppStorage(UserDefaultsKeys.showContentTypeIcons) private var showContentTypeIcons: Bool = true
-    
+
+    // Selection state - kept local to avoid "Publishing changes from within view updates" warning
+    // Exposed to menu commands via @FocusedValue
+    @State private var selectedTorrentIds: Set<Int> = []
+
     enum FocusTarget: Hashable { case contentList }
     @FocusState private var focusedTarget: FocusTarget?
     
@@ -98,18 +105,18 @@ struct macOSContentView: View {
         .frame(maxWidth: 400, minHeight: 80)
     }
     
-    // Binding for selected torrents derived from selected IDs
-    private var selectedTorrentsBinding: Binding<Set<Torrent>> {
-        Binding<Set<Torrent>>(
-            get: {
-                Set(store.selectedTorrentIds.compactMap { id in
-                    store.torrents.first { $0.id == id }
-                })
-            },
-            set: { newSelection in
-                store.selectedTorrentIds = Set(newSelection.map { $0.id })
-            }
-        )
+    // Computed set of selected torrents from selected IDs
+    private var selectedTorrentsSet: Set<Torrent> {
+        Set(selectedTorrentIds.compactMap { id in
+            store.torrents.first { $0.id == id }
+        })
+    }
+
+    // Computed property to get selected torrents (convenience)
+    private var selectedTorrents: Set<Torrent> {
+        Set(selectedTorrentIds.compactMap { id in
+            store.torrents.first { $0.id == id }
+        })
     }
     
     // Helper function to check if a torrent matches the search query and label filters
@@ -174,7 +181,7 @@ struct macOSContentView: View {
     
     // Remove selected torrents from menu command
     private func removeSelectedTorrentsFromMenu(deleteData: Bool) {
-        let selected = Array(store.selectedTorrents)
+        let selected = Array(selectedTorrents)
         guard !selected.isEmpty else { return }
         
         let info = makeConfig(store: store)
@@ -195,9 +202,7 @@ struct macOSContentView: View {
         }
         
         // Clear selection after removal
-        DispatchQueue.main.async {
-            store.selectedTorrentIds.removeAll()
-        }
+        selectedTorrentIds.removeAll()
     }
     
     // Computed properties for filter state
@@ -259,18 +264,18 @@ struct macOSContentView: View {
         .onChange(of: sidebarSelection) { oldValue, newValue in
             // Update the filter
             filterBySelection = newValue.filter
-            
+
             // Only clear selection if the selected torrent isn't in the new filtered list
-            if let selectedId = store.selectedTorrentIds.first {
+            if let selectedId = selectedTorrentIds.first {
                 let filteredTorrents = store.torrents.filtered(by: newValue.filter)
                     .filter { torrentMatchesSearch($0, query: searchText) }
                 let isSelectedTorrentInFilteredList = filteredTorrents.contains { $0.id == selectedId }
-                
+
                 if !isSelectedTorrentInFilteredList {
-                    store.selectedTorrentIds.removeAll()
+                    selectedTorrentIds.removeAll()
                 }
             }
-            
+
             print("\(newValue.rawValue) selected")
         }
         .onReceive(store.$torrents) { _ in
@@ -410,11 +415,11 @@ struct macOSContentView: View {
     // Extracted to simplify onChange(of: searchText)
     private func handleSearchTextChange(oldValue: String, newValue: String) {
         // Clear selection if the selected torrent no longer matches the search
-        if let selectedId = store.selectedTorrentIds.first {
+        if let selectedId = selectedTorrentIds.first {
             let selectedMatches = store.torrents.first(where: { $0.id == selectedId }).map { torrentMatchesSearch($0, query: searchText) } ?? false
             let isInFiltered = store.torrents.filtered(by: filterBySelection).contains { $0.id == selectedId }
             if !selectedMatches || !isInFiltered {
-                store.selectedTorrentIds.removeAll()
+                selectedTorrentIds.removeAll()
             }
         }
     }
@@ -428,7 +433,10 @@ struct macOSContentView: View {
         }
         .onChange(of: isInspectorVisible) { oldValue, newValue in
             UserDefaults.standard.inspectorVisibility = newValue
-            store.isInspectorVisible = newValue
+            // Defer state change to avoid publishing during view update
+            DispatchQueue.main.async {
+                store.isInspectorVisible = newValue
+            }
             focusedTarget = .contentList
         }
         .onChange(of: sortProperty) { oldValue, newValue in
@@ -440,7 +448,10 @@ struct macOSContentView: View {
         .onChange(of: store.shouldActivateSearch) { oldValue, newValue in
             if newValue {
                 isSearchPresented = true
-                store.shouldActivateSearch = false
+                // Defer state change to avoid publishing during view update
+                DispatchQueue.main.async {
+                    store.shouldActivateSearch = false
+                }
             }
         }
         .onChange(of: store.shouldToggleInspector) { oldValue, newValue in
@@ -448,7 +459,10 @@ struct macOSContentView: View {
                 withAnimation {
                     isInspectorVisible.toggle()
                 }
-                store.shouldToggleInspector = false
+                // Defer state change to avoid publishing during view update
+                DispatchQueue.main.async {
+                    store.shouldToggleInspector = false
+                }
             }
         }
         .onChange(of: searchText) { oldValue, newValue in
@@ -529,6 +543,8 @@ struct macOSContentView: View {
     // Final view with all remaining modifiers
     private var finalView: some View {
         enhancedView
+            // Expose selection to menu commands via FocusedValue
+            .focusedValue(\.selectedTorrentIds, $selectedTorrentIds)
     }
     
     var body: some View {
@@ -552,7 +568,7 @@ struct macOSContentView: View {
                     Button {
                         store.setHost(host: host)
                         // Clear selection when changing host
-                        store.selectedTorrentIds.removeAll()
+                        selectedTorrentIds.removeAll()
                         // Force refresh data when changing host
                         updateList(store: store, update: { _ in })
                     } label: {
@@ -641,7 +657,7 @@ struct macOSContentView: View {
                         // Compact table view
                         macOSTorrentListCompact(
                             torrents: sortedTorrents,
-                            selection: $store.selectedTorrentIds,
+                            selection: $selectedTorrentIds,
                             store: store,
                             showContentTypeIcons: showContentTypeIcons
                         )
@@ -649,12 +665,12 @@ struct macOSContentView: View {
                         .focused($focusedTarget, equals: .contentList)
                     } else {
                         // Expanded list view
-                        List(selection: $store.selectedTorrentIds) {
+                        List(selection: $selectedTorrentIds) {
                             ForEach(sortedTorrents, id: \.id) { torrent in
                                 TorrentListRow(
-                                    torrent: binding(for: torrent, in: store),
+                                    torrent: torrent,
                                     store: store,
-                                    selectedTorrents: selectedTorrentsBinding,
+                                    selectedTorrents: selectedTorrentsSet,
                                     showContentTypeIcons: showContentTypeIcons
                                 )
                                 .tag(torrent.id)
@@ -718,7 +734,7 @@ struct macOSContentView: View {
             Text(store.connectionErrorMessage)
         }
         .alert(
-            "Remove \(store.selectedTorrents.count > 1 ? "\(store.selectedTorrents.count) Torrents" : "Torrent")",
+            "Remove \(selectedTorrents.count > 1 ? "\(selectedTorrents.count) Torrents" : "Torrent")",
             isPresented: $store.showingMenuRemoveConfirmation) {
                 Button(role: .destructive) {
                     removeSelectedTorrentsFromMenu(deleteData: true)
@@ -740,9 +756,9 @@ struct macOSContentView: View {
     
     private var macOSDetail: some View {
         Group {
-            if let selectedId = store.selectedTorrentIds.first,
+            if let selectedId = selectedTorrentIds.first,
                let selectedTorrent = store.torrents.first(where: { $0.id == selectedId }) {
-                TorrentDetail(store: store, viewContext: viewContext, torrent: binding(for: selectedTorrent, in: store))
+                TorrentDetail(store: store, viewContext: viewContext, torrent: selectedTorrent)
                     .id(selectedTorrent.id)
             } else {
                 VStack {
