@@ -1,10 +1,3 @@
-//
-//  AddTorrent.swift
-//  BitDream
-//
-//  Created by Austin Smith on 12/29/22.
-//
-
 import Foundation
 import SwiftUI
 import KeychainAccess
@@ -15,7 +8,7 @@ import CoreData
 /// This view simply delegates to the appropriate platform-specific implementation
 struct AddTorrent: View {
     @ObservedObject var store: Store
-    
+
     var body: some View {
         #if os(iOS)
         iOSAddTorrent(store: store)
@@ -48,7 +41,7 @@ func addTorrentAction(
 ) {
     // Only proceed if we have a magnet link
     guard !alertInput.isEmpty else { return }
-    
+
     // Send the magnet link to the server
     let info = makeConfig(store: store)
     addTorrent(

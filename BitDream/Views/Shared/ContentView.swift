@@ -1,10 +1,3 @@
-//
-//  ContentView.swift
-//  BitDream
-//
-//  Created by Austin Smith on 12/29/22.
-//
-
 import Foundation
 import CoreData
 import KeychainAccess
@@ -20,7 +13,7 @@ extension UserDefaults {
         static let torrentListCompactMode = UserDefaultsKeys.torrentListCompactMode
         static let showContentTypeIcons = UserDefaultsKeys.showContentTypeIcons
     }
-    
+
     static let viewStateDefaults: [String: Any] = [
         Keys.sidebarVisibility: true, // true = show sidebar (.all), false = hide sidebar (.detailOnly)
         Keys.inspectorVisibility: true,
@@ -29,11 +22,11 @@ extension UserDefaults {
         Keys.torrentListCompactMode: false, // false = expanded view, true = compact table view
         Keys.showContentTypeIcons: true // true = show icons, false = hide icons
     ]
-    
+
     static func registerViewStateDefaults() {
         UserDefaults.standard.register(defaults: viewStateDefaults)
     }
-    
+
     var sidebarVisibility: NavigationSplitViewVisibility {
         get {
             return bool(forKey: Keys.sidebarVisibility) ? .all : .detailOnly
@@ -42,12 +35,12 @@ extension UserDefaults {
             set(newValue == .all, forKey: Keys.sidebarVisibility)
         }
     }
-    
+
     var inspectorVisibility: Bool {
         get { bool(forKey: Keys.inspectorVisibility) }
         set { set(newValue, forKey: Keys.inspectorVisibility) }
     }
-    
+
     var sortProperty: SortProperty {
         get {
             let rawValue = string(forKey: Keys.sortProperty) ?? "Name"
@@ -57,17 +50,17 @@ extension UserDefaults {
             set(newValue.rawValue, forKey: Keys.sortProperty)
         }
     }
-    
+
     var sortOrder: SortOrder {
         get { bool(forKey: Keys.sortOrder) ? .ascending : .descending }
         set { set(newValue == .ascending, forKey: Keys.sortOrder) }
     }
-    
+
     var torrentListCompactMode: Bool {
         get { bool(forKey: Keys.torrentListCompactMode) }
         set { set(newValue, forKey: Keys.torrentListCompactMode) }
     }
-    
+
     var showContentTypeIcons: Bool {
         get { bool(forKey: Keys.showContentTypeIcons) }
         set { set(newValue, forKey: Keys.showContentTypeIcons) }
@@ -93,37 +86,6 @@ struct ContentView: View {
     }
 }
 
-// Helper function to create binding for a torrent
-func binding(for torrent: Torrent, in store: Store) -> Binding<Torrent> {
-    return Binding<Torrent>(
-        get: {
-            if let index = store.torrents.firstIndex(where: { $0.id == torrent.id }) {
-                return store.torrents[index]
-            }
-            return torrent
-        },
-        set: { newValue in
-            if let index = store.torrents.firstIndex(where: { $0.id == torrent.id }) {
-                store.torrents[index] = newValue
-            }
-        }
-    )
-}
-
-// Helper function to create an ID-based selection binding
-func createTorrentSelectionBinding(selectedId: Binding<Int?>, in store: Store) -> Binding<Torrent?> {
-    return Binding<Torrent?>(
-        get: {
-            if let id = selectedId.wrappedValue {
-                return store.torrents.first { $0.id == id }
-            }
-            return nil
-        },
-        set: { newValue in
-            selectedId.wrappedValue = newValue?.id
-        }
-    )
-}
 
 // Helper function to set up the host
 func setupHost(hosts: FetchedResults<Host>, store: Store) {
@@ -168,7 +130,7 @@ struct StatsHeaderView: View {
     @ObservedObject var store: Store
     @ObservedObject private var themeManager = ThemeManager.shared
     @AppStorage(UserDefaultsKeys.ratioDisplayMode) private var ratioDisplayModeRaw: String = AppDefaults.ratioDisplayMode.rawValue
-    
+
     // MARK: - Computed totals and ratio
     private var ratioDisplayMode: RatioDisplayMode {
         RatioDisplayMode(rawValue: ratioDisplayModeRaw) ?? AppDefaults.ratioDisplayMode
@@ -189,12 +151,12 @@ struct StatsHeaderView: View {
         let fallbackUploaded = store.torrents.reduce(0) { $0 + $1.uploadedEver }
         return (uploaded: fallbackUploaded, downloaded: fallbackDownloaded)
     }
-    
+
     private var overallRatio: Double {
         let totals = overallTotals
         return totals.downloaded > 0 ? Double(totals.uploaded) / Double(totals.downloaded) : 0.0
     }
-    
+
     private var ratioTooltip: String {
         let totals = overallTotals
         let mode = ratioDisplayMode == .cumulative ? "Total Ratio" : "Session Ratio"
@@ -224,9 +186,9 @@ struct StatsHeaderView: View {
                     }
                 }
             }
-            
+
             Spacer()
-            
+
             HStack(spacing: 8) {
                 SpeedChip(
                     speed: store.sessionStats?.downloadSpeed ?? 0,
@@ -234,7 +196,7 @@ struct StatsHeaderView: View {
                     style: .chip,
                     size: .compact
                 )
-                
+
                 SpeedChip(
                     speed: store.sessionStats?.uploadSpeed ?? 0,
                     direction: .upload,
@@ -258,9 +220,9 @@ enum SidebarSelection: String, CaseIterable, Identifiable {
     case completed = "Completed"
     case paused = "Paused"
     case stalled = "Stalled"
-    
+
     var id: String { self.rawValue }
-    
+
     var icon: String {
         switch self {
         case .allDreams: return "tray.full"
@@ -271,7 +233,7 @@ enum SidebarSelection: String, CaseIterable, Identifiable {
         case .stalled: return "exclamationmark.circle"
         }
     }
-    
+
     var filter: [TorrentStatusCalc] {
         switch self {
         case .allDreams: return TorrentStatusCalc.allCases
@@ -296,11 +258,11 @@ extension Array where Element == Torrent {
             filterSelection.contains { $0 == torrent.statusCalc }
         }
     }
-    
+
     func filtered(by selectedLabels: Set<String>, enabled: Bool) -> [Torrent] {
         guard enabled else { return self }
         guard !selectedLabels.isEmpty else { return self }
-        
+
         return self.filter { torrent in
             // Show torrents that have at least one of the selected labels
             torrent.labels.contains { torrentLabel in
@@ -310,11 +272,11 @@ extension Array where Element == Torrent {
             }
         }
     }
-    
+
     func filtered(by statusFilter: [TorrentStatusCalc], labelFilter: Set<String>, labelFilterEnabled: Bool) -> [Torrent] {
         return self.filtered(by: statusFilter).filtered(by: labelFilter, enabled: labelFilterEnabled)
     }
-    
+
     func sorted(by property: SortProperty, order: SortOrder) -> [Torrent] {
         return sortTorrents(self, by: property, order: order)
     }
@@ -336,7 +298,7 @@ func getCompletedTorrentsCount(in store: Store) -> Int {
 func calculateTotalRatio(store: Store) -> Double {
     let totalDownloaded = store.torrents.reduce(0) { $0 + $1.downloadedEver }
     let totalUploaded = store.torrents.reduce(0) { $0 + $1.uploadedEver }
-    
+
     guard totalDownloaded > 0 else { return 0.0 }
     return Double(totalUploaded) / Double(totalDownloaded)
-} 
+}

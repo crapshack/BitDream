@@ -46,5 +46,3 @@ enum BackgroundRefreshManager {
     }
 }
 #endif
-
-

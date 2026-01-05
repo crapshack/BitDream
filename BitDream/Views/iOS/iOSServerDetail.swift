@@ -1,10 +1,3 @@
-//
-//  iOSServerDetail.swift
-//  BitDream
-//
-//  Created by Austin Smith on 12/29/22.
-//
-
 import Foundation
 import SwiftUI
 import KeychainAccess
@@ -18,9 +11,9 @@ struct iOSServerDetail: View {
     var hosts: FetchedResults<Host>
     @State var host: Host?
     var isAddNew: Bool
-    
+
     let keychain = Keychain(service: "crapshack.BitDream")
-    
+
     @State var nameInput: String = ""
     @State var hostInput: String = ""
     @State var portInput: Int = ServerDetail.defaultPort
@@ -31,15 +24,15 @@ struct iOSServerDetail: View {
     @State private var showingValidationAlert = false
     @State private var validationMessage = ""
     @State private var showingDeleteConfirmation = false
-    
+
     private var isHostValid: Bool {
         !hostInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
-    
+
     private var isPortValid: Bool {
         portInput >= 1 && portInput <= 65535
     }
-    
+
     private func validateFields() -> Bool {
         if !isHostValid {
             validationMessage = ServerDetail.hostRequiredMessage
@@ -53,7 +46,7 @@ struct iOSServerDetail: View {
         }
         return true
     }
-    
+
     var body: some View {
         NavigationStack {
             Form {
@@ -62,14 +55,14 @@ struct iOSServerDetail: View {
                     TextField("friendly name", text: $nameInput)
                         .multilineTextAlignment(.trailing)
                 }
-                
+
                 Section (footer: Text("Automatically connect to this server on app startup.")) {
                     Toggle("Default", isOn: $isDefault)
                         // disable the "Default" toggle if this is the only server
                         // it is either the first server being added, or the only one that exists
                         .disabled(hosts.count == 0 || (hosts.count == 1 && (!isAddNew)))
                 }
-                
+
                 Section(header: Text("Host")) {
                     HStack {
                         Text("Hostname")
@@ -78,13 +71,13 @@ struct iOSServerDetail: View {
                             .autocorrectionDisabled()
                             .textInputAutocapitalization(.never)
                     }
-                    
+
                     HStack {
                         Text("Port")
                         TextField("port", value: $portInput, formatter: ServerDetail.portFormatter)
                             .multilineTextAlignment(.trailing)
                     }
-                    
+
                     Toggle("Use SSL", isOn: $isSSL)
                         .onAppear {
                             if (store.host == nil) {
@@ -92,28 +85,28 @@ struct iOSServerDetail: View {
                             }
                         }
                 }
-                
+
                 Section(header: Text("Authentication")) {
                     HStack {
                         Text("Username")
-                        TextField("username",text: $userInput)
+                        TextField("username", text: $userInput)
                             .multilineTextAlignment(.trailing)
                             .autocapitalization(.none)
                             // .textInputAutocapitalization(.never)
                     }
-                    
+
                     HStack {
                         Text("Password")
                         SecureField("password", text: $passInput)
                             .multilineTextAlignment(.trailing)
                     }
                 }
-                
+
                 if (!isAddNew) {
                     Button(role: .destructive, action: {
                         showingDeleteConfirmation = true
                     }, label: {
-                        HStack{
+                        HStack {
                             Image(systemName: "trash")
                             Text("Delete Server")
                             Spacer()
@@ -122,7 +115,7 @@ struct iOSServerDetail: View {
                 }
             }
             .onAppear {
-                if(!isAddNew) {
+                if (!isAddNew) {
                     if let host = host {
                         loadServerData(host: host, keychain: keychain) { name, def, hostIn, port, ssl, user, pass in
                             nameInput = name
@@ -214,7 +207,7 @@ struct iOSServerDetail: View {
     var hosts: FetchedResults<Host>
     @State var host: Host?
     var isAddNew: Bool
-    
+
     init(store: Store, viewContext: NSManagedObjectContext, hosts: FetchedResults<Host>, host: Host? = nil, isAddNew: Bool) {
         self.store = store
         self.viewContext = viewContext
@@ -222,9 +215,9 @@ struct iOSServerDetail: View {
         self.host = host
         self.isAddNew = isAddNew
     }
-    
+
     var body: some View {
         EmptyView()
     }
 }
-#endif 
+#endif

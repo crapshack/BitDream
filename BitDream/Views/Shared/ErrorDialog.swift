@@ -1,16 +1,9 @@
-//
-//  ErrorDialog.swift
-//  BitDream
-//
-//  Created by Austin Smith on 12/29/22.
-//
-
 import Foundation
 import SwiftUI
 
 struct ErrorDialog: View {
     var store: Store
-    
+
     var body: some View {
         VStack {
             HStack {

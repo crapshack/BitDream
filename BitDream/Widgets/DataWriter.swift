@@ -55,5 +55,3 @@ func writeSessionSnapshot(store: Store, stats: SessionStats) {
         WidgetCenter.shared.reloadTimelines(ofKind: WidgetKind.sessionOverview)
     }
 }
-
-

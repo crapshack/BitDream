@@ -5,6 +5,9 @@ import CoreData
 import UniformTypeIdentifiers
 
 #if os(macOS)
+
+// MARK: - Main Content View
+
 struct macOSContentView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openSettings) private var openSettings
@@ -12,10 +15,10 @@ struct macOSContentView: View {
     let viewContext: NSManagedObjectContext
     let hosts: FetchedResults<Host>
     @ObservedObject var store: Store
-    
+
     // Add ThemeManager to access accent color
     @ObservedObject private var themeManager = ThemeManager.shared
-    
+
     @State var sortProperty: SortProperty = UserDefaults.standard.sortProperty
     @State var sortOrder: SortOrder = UserDefaults.standard.sortOrder
     @State private var filterBySelection: [TorrentStatusCalc] = TorrentStatusCalc.allCases
@@ -28,25 +31,29 @@ struct macOSContentView: View {
     @State private var showOnlyNoLabels: Bool = false
     @AppStorage(UserDefaultsKeys.torrentListCompactMode) private var isCompactMode: Bool = false
     @AppStorage(UserDefaultsKeys.showContentTypeIcons) private var showContentTypeIcons: Bool = true
-    
+
+    // Selection state - kept local to avoid "Publishing changes from within view updates" warning
+    // Exposed to menu commands via @FocusedValue
+    @State private var selectedTorrentIds: Set<Int> = []
+
     enum FocusTarget: Hashable { case contentList }
     @FocusState private var focusedTarget: FocusTarget?
-    
+
     // Search activation state - using isPresented for searchable
     @State private var isSearchPresented: Bool = false
-    
+
     // Drag and drop state
     @State private var isDropTargeted = false
     @State private var draggedTorrentInfo: [TorrentInfo] = []
     @State private var showingFilterPopover = false
-    
+
     // Torrent Preview Card Component
     private var torrentPreviewCard: some View {
         let totalSize = draggedTorrentInfo.reduce(0) { $0 + $1.totalSize }
         let totalFiles = draggedTorrentInfo.reduce(0) { $0 + $1.fileCount }
         let formattedTotalSize = byteCountFormatter.string(fromByteCount: totalSize)
         let fileCountText = totalFiles == 1 ? "1 file" : "\(totalFiles) files"
-        
+
         let displayTitle: String = {
             if draggedTorrentInfo.count == 1 {
                 if let name = draggedTorrentInfo.first?.name, !name.isEmpty {
@@ -65,7 +72,7 @@ struct macOSContentView: View {
                 .foregroundColor(.secondary)
                 .font(.system(size: 40))
                 .frame(width: 50, height: 50)
-            
+
             VStack(alignment: .leading, spacing: 4) {
                 Text(displayTitle)
                     .font(.title2)
@@ -73,7 +80,7 @@ struct macOSContentView: View {
                     .foregroundColor(.primary)
                     .lineLimit(2)
                     .truncationMode(.middle)
-                
+
                 HStack(spacing: 8) {
                     Text(formattedTotalSize)
                         .font(.system(.subheadline, design: .monospaced))
@@ -86,7 +93,7 @@ struct macOSContentView: View {
                         .foregroundColor(.secondary)
                 }
             }
-            
+
             Spacer()
         }
         .padding(20)
@@ -97,21 +104,21 @@ struct macOSContentView: View {
         )
         .frame(maxWidth: 400, minHeight: 80)
     }
-    
-    // Binding for selected torrents derived from selected IDs
-    private var selectedTorrentsBinding: Binding<Set<Torrent>> {
-        Binding<Set<Torrent>>(
-            get: {
-                Set(store.selectedTorrentIds.compactMap { id in
-                    store.torrents.first { $0.id == id }
-                })
-            },
-            set: { newSelection in
-                store.selectedTorrentIds = Set(newSelection.map { $0.id })
-            }
-        )
+
+    // Computed set of selected torrents from selected IDs
+    private var selectedTorrentsSet: Set<Torrent> {
+        Set(selectedTorrentIds.compactMap { id in
+            store.torrents.first { $0.id == id }
+        })
     }
-    
+
+    // Computed property to get selected torrents (convenience)
+    private var selectedTorrents: Set<Torrent> {
+        Set(selectedTorrentIds.compactMap { id in
+            store.torrents.first { $0.id == id }
+        })
+    }
+
     // Helper function to check if a torrent matches the search query and label filters
     private func torrentMatchesSearch(_ torrent: Torrent, query: String) -> Bool {
         // Check no-labels filter first
@@ -120,7 +127,7 @@ struct macOSContentView: View {
                 return false
             }
         }
-        
+
         // Check label filters
         if !includedLabels.isEmpty {
             let hasIncludedLabel = torrent.labels.contains { torrentLabel in
@@ -132,7 +139,7 @@ struct macOSContentView: View {
                 return false
             }
         }
-        
+
         if !excludedLabels.isEmpty {
             let hasExcludedLabel = torrent.labels.contains { torrentLabel in
                 excludedLabels.contains { excludedLabel in
@@ -143,16 +150,16 @@ struct macOSContentView: View {
                 return false
             }
         }
-        
+
         // If no search query, just return true (label filtering already applied above)
         if query.isEmpty {
             return true
         }
-        
+
         // Search in name only (simplified text search)
         return torrent.name.localizedCaseInsensitiveContains(query)
     }
-    
+
     // Computed property to get counts for each category
     private func torrentCount(for category: SidebarSelection) -> Int {
         let filteredByCategory = store.torrents.filtered(by: category.filter)
@@ -161,24 +168,24 @@ struct macOSContentView: View {
         }
         return filteredBySearch.count
     }
-    
+
     // Computed property to get completed torrents count
     private var completedTorrentsCount: Int {
         getCompletedTorrentsCount(in: store)
     }
-    
+
     // Update the app badge
     private func updateAppBadge() {
         updateMacOSAppBadge(count: completedTorrentsCount)
     }
-    
+
     // Remove selected torrents from menu command
     private func removeSelectedTorrentsFromMenu(deleteData: Bool) {
-        let selected = Array(store.selectedTorrents)
+        let selected = Array(selectedTorrents)
         guard !selected.isEmpty else { return }
-        
+
         let info = makeConfig(store: store)
-        
+
         for torrent in selected {
             deleteTorrent(torrent: torrent, erase: deleteData, config: info.config, auth: info.auth) { response in
                 handleTransmissionResponse(response,
@@ -193,35 +200,33 @@ struct macOSContentView: View {
                 )
             }
         }
-        
+
         // Clear selection after removal
-        DispatchQueue.main.async {
-            store.selectedTorrentIds.removeAll()
-        }
+        selectedTorrentIds.removeAll()
     }
-    
+
     // Computed properties for filter state
     private var hasActiveFilters: Bool {
         !includedLabels.isEmpty || !excludedLabels.isEmpty || showOnlyNoLabels
     }
-    
+
     private var activeFilterCount: Int {
         includedLabels.count + excludedLabels.count + (showOnlyNoLabels ? 1 : 0)
     }
-    
+
     // Computed property for navigation subtitle
     private var navigationSubtitle: String {
         let count = torrentCount(for: sidebarSelection)
         var subtitle = "\(count) dream\(count == 1 ? "" : "s")"
-        
+
         // Add label filter indicators
         if hasActiveFilters {
             subtitle += " • \(activeFilterCount) label filter\(activeFilterCount == 1 ? "" : "s")"
         }
-        
+
         return subtitle
     }
-    
+
     // Base view with basic modifiers
     private var baseView: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
@@ -231,7 +236,7 @@ struct macOSContentView: View {
         }
         .defaultFocus($focusedTarget, .contentList)
     }
-    
+
     // View with just sheet modifiers
     private var viewWithSheets: some View {
         baseView
@@ -252,25 +257,25 @@ struct macOSContentView: View {
                 .frame(width: 400, height: 400)
         }
     }
-    
+
     // View with basic event handlers
     private var viewWithHandlers: some View {
         viewWithSheets
         .onChange(of: sidebarSelection) { oldValue, newValue in
             // Update the filter
             filterBySelection = newValue.filter
-            
+
             // Only clear selection if the selected torrent isn't in the new filtered list
-            if let selectedId = store.selectedTorrentIds.first {
+            if let selectedId = selectedTorrentIds.first {
                 let filteredTorrents = store.torrents.filtered(by: newValue.filter)
                     .filter { torrentMatchesSearch($0, query: searchText) }
                 let isSelectedTorrentInFilteredList = filteredTorrents.contains { $0.id == selectedId }
-                
+
                 if !isSelectedTorrentInFilteredList {
-                    store.selectedTorrentIds.removeAll()
+                    selectedTorrentIds.removeAll()
                 }
             }
-            
+
             print("\(newValue.rawValue) selected")
         }
         .onReceive(store.$torrents) { _ in
@@ -283,7 +288,7 @@ struct macOSContentView: View {
             updateAppBadge()
         }
     }
-    
+
     // Search suggestions - simplified for text search only
     private var searchSuggestions: some View {
         Group {
@@ -291,7 +296,7 @@ struct macOSContentView: View {
             EmptyView()
         }
     }
-    
+
     // Sort menu content extracted to reduce type-check complexity
     private var sortMenuContent: some View {
         Group {
@@ -304,9 +309,9 @@ struct macOSContentView: View {
                     Text(property.rawValue)
                 }
             }
-            
+
             Divider()
-            
+
             let isAscending = Binding<Bool>(
                 get: { sortOrder == .ascending },
                 set: { if $0 { sortOrder = .ascending } }
@@ -314,7 +319,7 @@ struct macOSContentView: View {
             Toggle(isOn: isAscending) {
                 Text("Ascending")
             }
-            
+
             let isDescending = Binding<Bool>(
                 get: { sortOrder == .descending },
                 set: { if $0 { sortOrder = .descending } }
@@ -324,7 +329,7 @@ struct macOSContentView: View {
             }
         }
     }
-    
+
     // Filter menu content for the filter button
     private var filterMenuContent: some View {
         Group {
@@ -337,7 +342,7 @@ struct macOSContentView: View {
                             if showOnlyNoLabels {
                                 showOnlyNoLabels = false
                             }
-                            
+
                             if includedLabels.contains(label) {
                                 includedLabels.remove(label)
                                 excludedLabels.insert(label)
@@ -350,12 +355,12 @@ struct macOSContentView: View {
                             HStack {
                                 Image(systemName: includedLabels.contains(label) ? "checkmark.circle.fill" : excludedLabels.contains(label) ? "minus.circle.fill" : "circle")
                                     .foregroundColor(includedLabels.contains(label) ? themeManager.accentColor : excludedLabels.contains(label) ? .red : .secondary)
-                                
+
                                 Text(label)
                                     .foregroundColor(.primary)
-                                
+
                                 Spacer()
-                                
+
                                 Text("\(store.torrentCount(for: label))")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
@@ -364,10 +369,10 @@ struct macOSContentView: View {
                         }
                         .buttonStyle(.plain)
                     }
-                    
+
                     Divider()
                 }
-                
+
                 // No labels option at bottom
                 Button(action: {
                     showOnlyNoLabels.toggle()
@@ -380,13 +385,13 @@ struct macOSContentView: View {
                     HStack {
                         Image(systemName: showOnlyNoLabels ? "checkmark.circle.fill" : "circle")
                             .foregroundColor(showOnlyNoLabels ? themeManager.accentColor : .secondary)
-                        
+
                         Text("No labels")
                             .foregroundColor(.primary)
                             .italic()
-                        
+
                         Spacer()
-                        
+
                         Text("\(store.torrents.filter { $0.labels.isEmpty }.count)")
                             .font(.caption)
                             .foregroundColor(.secondary)
@@ -395,7 +400,7 @@ struct macOSContentView: View {
                 }
                 .buttonStyle(.plain)
             }
-            
+
             if hasActiveFilters {
                 Divider()
                 Button("Clear All Filters") {
@@ -406,15 +411,15 @@ struct macOSContentView: View {
             }
         }
     }
-    
+
     // Extracted to simplify onChange(of: searchText)
     private func handleSearchTextChange(oldValue: String, newValue: String) {
         // Clear selection if the selected torrent no longer matches the search
-        if let selectedId = store.selectedTorrentIds.first {
+        if let selectedId = selectedTorrentIds.first {
             let selectedMatches = store.torrents.first(where: { $0.id == selectedId }).map { torrentMatchesSearch($0, query: searchText) } ?? false
             let isInFiltered = store.torrents.filtered(by: filterBySelection).contains { $0.id == selectedId }
             if !selectedMatches || !isInFiltered {
-                store.selectedTorrentIds.removeAll()
+                selectedTorrentIds.removeAll()
             }
         }
     }
@@ -428,7 +433,10 @@ struct macOSContentView: View {
         }
         .onChange(of: isInspectorVisible) { oldValue, newValue in
             UserDefaults.standard.inspectorVisibility = newValue
-            store.isInspectorVisible = newValue
+            // Defer state change to avoid publishing during view update
+            DispatchQueue.main.async {
+                store.isInspectorVisible = newValue
+            }
             focusedTarget = .contentList
         }
         .onChange(of: sortProperty) { oldValue, newValue in
@@ -440,7 +448,10 @@ struct macOSContentView: View {
         .onChange(of: store.shouldActivateSearch) { oldValue, newValue in
             if newValue {
                 isSearchPresented = true
-                store.shouldActivateSearch = false
+                // Defer state change to avoid publishing during view update
+                DispatchQueue.main.async {
+                    store.shouldActivateSearch = false
+                }
             }
         }
         .onChange(of: store.shouldToggleInspector) { oldValue, newValue in
@@ -448,7 +459,10 @@ struct macOSContentView: View {
                 withAnimation {
                     isInspectorVisible.toggle()
                 }
-                store.shouldToggleInspector = false
+                // Defer state change to avoid publishing during view update
+                DispatchQueue.main.async {
+                    store.shouldToggleInspector = false
+                }
             }
         }
         .onChange(of: searchText) { oldValue, newValue in
@@ -465,7 +479,7 @@ struct macOSContentView: View {
                     Label("Sort", systemImage: "arrow.up.arrow.down.circle")
                 }
             }
-            
+
             // Filter button
             ToolbarItem(placement: .automatic) {
                 Button(action: {
@@ -485,7 +499,7 @@ struct macOSContentView: View {
                     .frame(minWidth: 250)
                 }
             }
-            
+
             // Add torrent button
             ToolbarItem(placement: .primaryAction) {
                 Button(action: {
@@ -495,7 +509,7 @@ struct macOSContentView: View {
                 }
                 .help("Add torrent")
             }
-            
+
             // Toggle compact mode button
             ToolbarItem(placement: .automatic) {
                 Button(action: {
@@ -510,7 +524,7 @@ struct macOSContentView: View {
                 }
                 .help(isCompactMode ? "Expanded view" : "Compact view")
             }
-            
+
             // Toggle inspector button
             ToolbarItem(placement: .automatic) {
                 Button(action: {
@@ -529,14 +543,16 @@ struct macOSContentView: View {
     // Final view with all remaining modifiers
     private var finalView: some View {
         enhancedView
+            // Expose selection to menu commands via FocusedValue
+            .focusedValue(\.selectedTorrentIds, $selectedTorrentIds)
     }
-    
+
     var body: some View {
         finalView
     }
-    
+
     // MARK: - macOS Views
-    
+
     private var sidebarView: some View {
         List(selection: $sidebarSelection) {
             Section("Dreams") {
@@ -546,13 +562,13 @@ struct macOSContentView: View {
                         .tag(item)
                 }
             }
-            
+
             Section("Servers") {
                 ForEach(hosts, id: \.self) { host in
                     Button {
                         store.setHost(host: host)
                         // Clear selection when changing host
-                        store.selectedTorrentIds.removeAll()
+                        selectedTorrentIds.removeAll()
                         // Force refresh data when changing host
                         updateList(store: store, update: { _ in })
                     } label: {
@@ -567,7 +583,7 @@ struct macOSContentView: View {
                     }
                     .buttonStyle(.plain)
                 }
-                
+
                 Button {
                     store.setup.toggle()
                 } label: {
@@ -575,7 +591,7 @@ struct macOSContentView: View {
                 }
                 .buttonStyle(.plain)
             }
-            
+
             Section("Settings") {
                 Button {
                     store.editServers.toggle()
@@ -583,7 +599,7 @@ struct macOSContentView: View {
                     Label("Manage Servers", systemImage: "gearshape")
                 }
                 .buttonStyle(.plain)
-                
+
                 Button {
                     openSettings()
                 } label: {
@@ -595,17 +611,17 @@ struct macOSContentView: View {
         .listStyle(SidebarListStyle())
         .tint(themeManager.accentColor) // Apply accent color to sidebar selection
     }
-    
+
     private var detailView: some View {
         VStack(spacing: 0) {
             StatsHeaderView(store: store)
-            
+
             VStack {
                 // Torrent list
                 if store.torrents.isEmpty {
                     VStack {
                         Spacer()
-                        
+
                         if isDropTargeted {
                             VStack(spacing: 12) {
                                 Image(systemName: "plus.circle")
@@ -626,7 +642,7 @@ struct macOSContentView: View {
                                     .foregroundColor(.secondary)
                             }
                         }
-                        
+
                         Spacer()
                     }
                 } else {
@@ -636,12 +652,12 @@ struct macOSContentView: View {
                             torrentMatchesSearch(torrent, query: searchText)
                         }
                     let sortedTorrents = sortTorrents(filteredTorrents, by: sortProperty, order: sortOrder)
-                    
+
                     if isCompactMode {
                         // Compact table view
                         macOSTorrentListCompact(
                             torrents: sortedTorrents,
-                            selection: $store.selectedTorrentIds,
+                            selection: $selectedTorrentIds,
                             store: store,
                             showContentTypeIcons: showContentTypeIcons
                         )
@@ -649,12 +665,12 @@ struct macOSContentView: View {
                         .focused($focusedTarget, equals: .contentList)
                     } else {
                         // Expanded list view
-                        List(selection: $store.selectedTorrentIds) {
+                        List(selection: $selectedTorrentIds) {
                             ForEach(sortedTorrents, id: \.id) { torrent in
                                 TorrentListRow(
-                                    torrent: binding(for: torrent, in: store),
+                                    torrent: torrent,
                                     store: store,
-                                    selectedTorrents: selectedTorrentsBinding,
+                                    selectedTorrents: selectedTorrentsSet,
                                     showContentTypeIcons: showContentTypeIcons
                                 )
                                 .tag(torrent.id)
@@ -702,7 +718,7 @@ struct macOSContentView: View {
         }
         .navigationTitle(sidebarSelection.rawValue)
         .navigationSubtitle(navigationSubtitle)
-        
+
         .refreshable {
             updateList(store: store, update: {_ in})
         }
@@ -718,7 +734,7 @@ struct macOSContentView: View {
             Text(store.connectionErrorMessage)
         }
         .alert(
-            "Remove \(store.selectedTorrents.count > 1 ? "\(store.selectedTorrents.count) Torrents" : "Torrent")",
+            "Remove \(selectedTorrents.count > 1 ? "\(selectedTorrents.count) Torrents" : "Torrent")",
             isPresented: $store.showingMenuRemoveConfirmation) {
                 Button(role: .destructive) {
                     removeSelectedTorrentsFromMenu(deleteData: true)
@@ -737,12 +753,12 @@ struct macOSContentView: View {
                 .inspectorColumnWidth(min: 350, ideal: 400, max: 500)
         }
     }
-    
+
     private var macOSDetail: some View {
         Group {
-            if let selectedId = store.selectedTorrentIds.first,
+            if let selectedId = selectedTorrentIds.first,
                let selectedTorrent = store.torrents.first(where: { $0.id == selectedId }) {
-                TorrentDetail(store: store, viewContext: viewContext, torrent: binding(for: selectedTorrent, in: store))
+                TorrentDetail(store: store, viewContext: viewContext, torrent: selectedTorrent)
                     .id(selectedTorrent.id)
             } else {
                 VStack {
@@ -767,30 +783,30 @@ struct TorrentDropDelegate: DropDelegate {
     @Binding var isDropTargeted: Bool
     @Binding var draggedTorrentInfo: [TorrentInfo]
     let store: Store
-    
+
     func dropEntered(info: DropInfo) {
         isDropTargeted = true
-        
+
         // Count expected torrents first
         let providers = info.itemProviders(for: [.fileURL])
         var parsedInfos: [TorrentInfo] = []
         let group = DispatchGroup()
         let resultsLock = NSLock()
-        
+
         for provider in providers {
             if provider.canLoadObject(ofClass: URL.self) {
                 group.enter()
                 _ = provider.loadObject(ofClass: URL.self) { url, error in
                     defer { group.leave() }
                     guard let url = url, url.pathExtension.lowercased() == "torrent" else { return }
-                    
+
                     do {
                         var didAccess = false
                         if url.isFileURL {
                             didAccess = url.startAccessingSecurityScopedResource()
                         }
                         defer { if didAccess { url.stopAccessingSecurityScopedResource() } }
-                        
+
                         let data = try Data(contentsOf: url)
                         if let torrentInfo = parseTorrentInfo(from: data) {
                             resultsLock.lock()
@@ -803,26 +819,26 @@ struct TorrentDropDelegate: DropDelegate {
                 }
             }
         }
-        
+
         // Update UI only when ALL torrents are parsed
         group.notify(queue: .main) {
             draggedTorrentInfo = parsedInfos
         }
     }
-    
+
     func dropExited(info: DropInfo) {
         isDropTargeted = false
         draggedTorrentInfo = []
     }
-    
+
     func performDrop(info: DropInfo) -> Bool {
         isDropTargeted = false
-        
+
         for provider in info.itemProviders(for: [.fileURL]) {
             if provider.canLoadObject(ofClass: URL.self) {
                 _ = provider.loadObject(ofClass: URL.self) { url, error in
                     guard let url = url, url.pathExtension.lowercased() == "torrent" else { return }
-                    
+
                     DispatchQueue.global(qos: .userInitiated).async {
                         do {
                             var didAccess = false
@@ -830,7 +846,7 @@ struct TorrentDropDelegate: DropDelegate {
                                 didAccess = url.startAccessingSecurityScopedResource()
                             }
                             defer { if didAccess { url.stopAccessingSecurityScopedResource() } }
-                            
+
                             let data = try Data(contentsOf: url)
                             DispatchQueue.main.async {
                                 addTorrentFromFileData(data, store: store)
@@ -842,10 +858,10 @@ struct TorrentDropDelegate: DropDelegate {
                 }
             }
         }
-        
+
         return true
     }
-    
+
     func validateDrop(info: DropInfo) -> Bool {
         return info.hasItemsConforming(to: [.fileURL])
     }
@@ -864,7 +880,7 @@ struct LabelFilterChip: View {
     let isExcluded: Bool
     let onAction: (LabelFilterAction) -> Void
     @ObservedObject private var themeManager = ThemeManager.shared
-    
+
     private var backgroundColor: Color {
         if isIncluded {
             return themeManager.accentColor.opacity(0.2)
@@ -874,7 +890,7 @@ struct LabelFilterChip: View {
             return Color(NSColor.controlColor)
         }
     }
-    
+
     private var borderColor: Color {
         if isIncluded {
             return themeManager.accentColor
@@ -884,7 +900,7 @@ struct LabelFilterChip: View {
             return Color.secondary.opacity(0.3)
         }
     }
-    
+
     private var textColor: Color {
         if isIncluded {
             return themeManager.accentColor
@@ -894,7 +910,7 @@ struct LabelFilterChip: View {
             return Color.primary
         }
     }
-    
+
     var body: some View {
         Button(action: {
             if isIncluded {
@@ -909,15 +925,15 @@ struct LabelFilterChip: View {
                 Image(systemName: "tag.fill")
                     .font(.caption2)
                     .foregroundColor(textColor)
-                
+
                 Text(label)
                     .font(.caption)
                     .foregroundColor(textColor)
-                
+
                 Text("(\(count))")
                     .font(.caption2)
                     .foregroundColor(.secondary)
-                
+
                 if isExcluded {
                     Image(systemName: "minus.circle.fill")
                         .font(.caption2)
@@ -944,9 +960,9 @@ struct macOSContentView: View {
     let viewContext: NSManagedObjectContext
     let hosts: FetchedResults<Host>
     @ObservedObject var store: Store
-    
+
     var body: some View {
         EmptyView()
     }
 }
-#endif 
+#endif

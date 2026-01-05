@@ -1,10 +1,3 @@
-//
-//  Store.swift
-//  BitDream
-//
-//  Created by Austin Smith on 12/29/22.
-//
-
 import SwiftUI
 import Foundation
 import KeychainAccess
@@ -29,7 +22,7 @@ class Store: NSObject, ObservableObject {
     @Published var host: Host?
 
     @Published var defaultDownloadDir: String = ""
-    
+
     @Published var isShowingAddAlert: Bool = false
     // When presenting Add Torrent, optional prefill for the magnet link input (macOS only used)
     @Published var addTorrentPrefill: String? = nil
@@ -46,27 +39,24 @@ class Store: NSObject, ObservableObject {
         }
     }
     @Published var showSettings: Bool = false
-    
+
     @Published var isError: Bool = false
     @Published var debugBrief: String = ""
     @Published var debugMessage: String = ""
-    
+
     @Published var connectionError: Bool = false
     @Published var connectionErrorMessage: String = ""
-    
+
     @Published var showConnectionErrorAlert: Bool = false
     @Published var isEditingServerSettings: Bool = false  // Flag to pause reconnection attempts
-    
+
     @Published var sessionConfiguration: TransmissionSessionResponseArguments?
-    
+
     @Published var pollInterval: Double = AppDefaults.pollInterval // Default poll interval in seconds
     @Published var shouldActivateSearch: Bool = false
     @Published var shouldToggleInspector: Bool = false
     @Published var isInspectorVisible: Bool = UserDefaults.standard.inspectorVisibility
-    
-    // Selection state for menu commands (macOS only)
-    @Published var selectedTorrentIds: Set<Int> = []
-    
+
 #if os(macOS)
     // Controls how the Add Torrent flow should start when invoked from menu
     @Published var addTorrentInitialMode: AddTorrentInitialMode? = nil
@@ -81,19 +71,12 @@ class Store: NSObject, ObservableObject {
     @Published var globalRenameInput: String = ""
     @Published var globalRenameTargetId: Int? = nil
 #endif
-    
-    // Computed property to get selected torrents
-    var selectedTorrents: Set<Torrent> {
-        Set(selectedTorrentIds.compactMap { id in
-            torrents.first { $0.id == id }
-        })
-    }
-    
+
     // Confirmation dialog state for menu remove command
     @Published var showingMenuRemoveConfirmation = false
-    
+
     var timer: Timer = Timer()
-    
+
     override init() {
         super.init()
         // Load persisted poll interval if available
@@ -123,14 +106,14 @@ class Store: NSObject, ObservableObject {
             }
         }
     }
-    
+
     func presentNextMagnetIfAvailable() {
         guard let next = pendingMagnetQueue.first else { return }
         addTorrentPrefill = next
         addTorrentInitialMode = .magnet
         isShowingAddAlert = true
     }
-    
+
     func advanceMagnetQueue() {
         DispatchQueue.main.async {
             if !self.pendingMagnetQueue.isEmpty {
@@ -148,7 +131,7 @@ class Store: NSObject, ObservableObject {
         }
     }
     #endif
-    
+
     public func setHost(host: Host) {
         // Avoid redundant resets if host is unchanged (prevents list flash)
         if let current = self.host, current.objectID == host.objectID {
@@ -158,38 +141,24 @@ class Store: NSObject, ObservableObject {
         config.host = host.server
         config.port = Int(host.port)
         config.scheme = host.isSSL ? "https" : "http"
-        
+
         let auth = TransmissionAuth(username: host.username!, password: readPassword(name: host.name!))
         self.server = Server(config: config, auth: auth)
         self.host = host
-        
-        // Get server version and download directory
-        getSession(config: config, auth: auth, onResponse: { sessionInfo in
-            DispatchQueue.main.async {
-                self.defaultDownloadDir = sessionInfo.downloadDir
-                self.sessionConfiguration = sessionInfo
-                
-                // Store the version in CoreData
-                host.version = sessionInfo.version
-                try? PersistenceController.shared.container.viewContext.save()
-            }
-        }, onError: { error in
-            print("Failed to get session info: \(error)")
-            DispatchQueue.main.async {
-                self.sessionConfiguration = nil
-            }
-        })
-        
-        // Clear torrents before refreshing to ensure list resets to top
+
+        // Clear all local state so UI/actions can't use stale data from the previous host
         self.torrents = []
-        
-        // refresh data immediately after setting new host
+        self.sessionStats = nil
+        self.sessionConfiguration = nil
+        self.defaultDownloadDir = ""
+
+        // Kick off refresh loop immediately; refreshTransmissionData handles torrents,
+        // session stats, and session info (including defaultDownloadDir) with retry logic
+        timer.invalidate()
         refreshTransmissionData(store: self)
-        
-        // begin auto-refresh of data
         startTimer()
     }
-    
+
     func readPassword(name: String) -> String {
         let keychain = Keychain(service: "crapshack.BitDream")
         if let password = keychain[name] {
@@ -199,52 +168,52 @@ class Store: NSObject, ObservableObject {
             return "Whoopsie!"
         }
     }
-    
+
     func startTimer() {
         self.timer = Timer.scheduledTimer(withTimeInterval: pollInterval, repeats: true, block: { _ in
             // Skip updates if user is actively editing server settings
             if self.isEditingServerSettings {
                 return
             }
-            
+
             DispatchQueue.main.async {
                 updateList(store: self, update: { vals in
                     DispatchQueue.main.async {
-                        self.objectWillChange.send()
+                        // Setting @Published properties automatically triggers objectWillChange
                         self.torrents = vals
                     }
                 })
                 updateSessionStats(store: self, update: { vals in
                     DispatchQueue.main.async {
-                        self.objectWillChange.send()
+                        // Setting @Published properties automatically triggers objectWillChange
                         self.sessionStats = vals
                     }
                 })
             }
         })
     }
-    
+
     // Method to reconnect to the server
     func reconnect() {
         // Before attempting reconnection, make sure the alert is dismissed
         self.showConnectionErrorAlert = false
-        
+
         if let host = self.host {
             // Try to reconnect to the current host
             self.setHost(host: host)
         }
     }
-    
+
     // Computed property to provide current server info for session-set calls
     var currentServerInfo: (config: TransmissionConfig, auth: TransmissionAuth)? {
         guard let server = self.server else { return nil }
         return (config: server.config, auth: server.auth)
     }
-    
+
     // Method to refresh session configuration after settings changes
     func refreshSessionConfiguration() {
         guard let serverInfo = currentServerInfo else { return }
-        
+
         getSession(config: serverInfo.config, auth: serverInfo.auth, onResponse: { sessionInfo in
             DispatchQueue.main.async {
                 self.sessionConfiguration = sessionInfo
@@ -254,7 +223,7 @@ class Store: NSObject, ObservableObject {
             print("Failed to refresh session info: \(error)")
         })
     }
-    
+
     // Method to handle connection errors
     func handleConnectionError(message: String) {
         DispatchQueue.main.async {
@@ -264,34 +233,34 @@ class Store: NSObject, ObservableObject {
             self.timer.invalidate()
         }
     }
-    
+
     // Add a method to update the poll interval and restart the timer
     func updatePollInterval(_ newInterval: Double) {
         // Ensure the interval is at least 1 second
         pollInterval = max(1.0, newInterval)
         // Persist the new interval
         UserDefaults.standard.set(pollInterval, forKey: UserDefaultsKeys.pollInterval)
-        
+
         // Stop the current timer
         timer.invalidate()
-        
+
         // Start a new timer with the updated interval
         startTimer()
-        
+
         // Update the macOS background scheduler with new interval
         #if os(macOS)
         BackgroundActivityScheduler.updateInterval(newInterval)
         #endif
     }
-    
+
     // MARK: - Label Management
-    
+
     /// Get all unique labels from current torrents, sorted alphabetically
     var availableLabels: [String] {
         let allLabels = torrents.flatMap { $0.labels }
         return Array(Set(allLabels)).sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
     }
-    
+
     /// Get count of torrents that have the specified label
     func torrentCount(for label: String) -> Int {
         return torrents.filter { torrent in

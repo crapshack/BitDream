@@ -8,7 +8,7 @@ struct iOSContentView: View {
     let viewContext: NSManagedObjectContext
     let hosts: FetchedResults<Host>
     @ObservedObject var store: Store
-    
+
     // Add explicit initializer with internal access level
     init(viewContext: NSManagedObjectContext, hosts: FetchedResults<Host>, store: Store) {
         self.viewContext = viewContext
@@ -17,37 +17,30 @@ struct iOSContentView: View {
     }
 
     private var keychain = Keychain(service: "crapshack.BitDream")
-    
-    // Store the selected torrent IDs instead of a single ID
+
+    // Store the selected torrent IDs
     @State private var selectedTorrentIds: Set<Int> = []
-    
+
     // Computed property to get the selected torrents from the IDs
-    private var torrentSelection: Binding<Set<Torrent>> {
-        Binding<Set<Torrent>>(
-            get: {
-                Set(selectedTorrentIds.compactMap { id in
-                    store.torrents.first { $0.id == id }
-                })
-            },
-            set: { newSelection in
-                selectedTorrentIds = Set(newSelection.map { $0.id })
-            }
-        )
+    private var selectedTorrentsSet: Set<Torrent> {
+        Set(selectedTorrentIds.compactMap { id in
+            store.torrents.first { $0.id == id }
+        })
     }
-    
+
     @State var sortProperty: SortProperty = UserDefaults.standard.sortProperty
     @State var sortOrder: SortOrder = UserDefaults.standard.sortOrder
     @State var filterBySelection: [TorrentStatusCalc] = TorrentStatusCalc.allCases
     @AppStorage(UserDefaultsKeys.showContentTypeIcons) private var showContentTypeIcons: Bool = true
     @State private var searchText: String = ""
-    
+
     var body: some View {
         NavigationSplitView {
             VStack(spacing: 0) {
                 StatsHeaderView(store: store)
-                
+
                 // Show list regardless of connection status
-                List(selection: torrentSelection) {
+                List(selection: $selectedTorrentIds) {
                     torrentRows
                 }
                 .listStyle(PlainListStyle())
@@ -86,8 +79,8 @@ struct iOSContentView: View {
                 Text(store.connectionErrorMessage)
             }
         } detail: {
-            if let selectedTorrent = torrentSelection.wrappedValue.first {
-                TorrentDetail(store: store, viewContext: viewContext, torrent: binding(for: selectedTorrent, in: store))
+            if let selectedTorrent = selectedTorrentsSet.first {
+                TorrentDetail(store: store, viewContext: viewContext, torrent: selectedTorrent)
             } else {
                 Text("Select a Dream")
             }
@@ -110,9 +103,9 @@ struct iOSContentView: View {
             SettingsView(store: store)
         }
     }
-    
+
     // MARK: - iOS Views
-    
+
     private var torrentRows: some View {
         Group {
             if store.torrents.isEmpty {
@@ -129,21 +122,20 @@ struct iOSContentView: View {
                 let sortedTorrents = sortTorrents(filteredBySearch, by: sortProperty, order: sortOrder)
                 ForEach(sortedTorrents, id: \.id) { torrent in
                     TorrentListRow(
-                        torrent: binding(for: torrent, in: store),
+                        torrent: torrent,
                         store: store,
-                        selectedTorrents: torrentSelection,
+                        selectedTorrents: selectedTorrentsSet,
                         showContentTypeIcons: showContentTypeIcons
                     )
-                    .tag(torrent)
-                    .id(torrent.id)
+                    .tag(torrent.id)
                     .listRowSeparator(.visible)
                 }
             }
         }
     }
-    
+
     // MARK: - Toolbar Items
-    
+
     private var serverToolbarItem: some ToolbarContent {
         ToolbarItem(placement: .automatic) {
             Menu {
@@ -176,7 +168,7 @@ struct iOSContentView: View {
             }
         }
     }
-    
+
     private var actionToolbarItems: some ToolbarContent {
         ToolbarItemGroup(placement: .automatic) {
             Menu {
@@ -204,7 +196,7 @@ struct iOSContentView: View {
                     Text("Filter By")
                     Image(systemName: "slider.horizontal.3")
                 }.environment(\.menuOrder, .fixed)
-                
+
                 Menu {
                     // Sort properties
                     ForEach(SortProperty.allCases, id: \.self) { property in
@@ -220,9 +212,9 @@ struct iOSContentView: View {
                             }
                         }
                     }
-                    
+
                     Divider()
-                    
+
                     // Sort order
                     Button {
                         sortOrder = .ascending
@@ -235,7 +227,7 @@ struct iOSContentView: View {
                             }
                         }
                     }
-                    
+
                     Button {
                         sortOrder = .descending
                     } label: {
@@ -250,9 +242,9 @@ struct iOSContentView: View {
                 } label: {
                     Label("Sort", systemImage: "arrow.up.arrow.down")
                 }.environment(\.menuOrder, .fixed)
-                
+
                 Divider()
-                
+
                 Button(action: {
                     playPauseAllTorrents(start: false, info: makeConfig(store: store), onResponse: { response in
                         updateList(store: store, update: {_ in})
@@ -260,7 +252,7 @@ struct iOSContentView: View {
                 }) {
                     Label("Pause All", systemImage: "pause")
                 }
-                
+
                 Button(action: {
                     playPauseAllTorrents(start: true, info: makeConfig(store: store), onResponse: { response in
                         updateList(store: store, update: {_ in})
@@ -268,9 +260,9 @@ struct iOSContentView: View {
                 }) {
                     Label("Resume All", systemImage: "play")
                 }
-                
+
                 Divider()
-                
+
                 Button(action: {
                     store.showSettings.toggle()
                 }) {
@@ -281,17 +273,14 @@ struct iOSContentView: View {
             }
         }
     }
-    
-    // MARK: - Bottom Toolbar (Native iOS 26)
-    
+
+    // MARK: - Bottom Toolbar
+
     private var bottomToolbarItems: some ToolbarContent {
         Group {
-            // iOS 26 native search placement in bottom toolbar
-            if #available(iOS 26.0, *) {
-                DefaultToolbarItem(kind: .search, placement: .bottomBar)
-                ToolbarSpacer(.flexible, placement: .bottomBar)
-            }
-            
+            DefaultToolbarItem(kind: .search, placement: .bottomBar)
+            ToolbarSpacer(.flexible, placement: .bottomBar)
+
             ToolbarItem(placement: .bottomBar) {
                 Button(action: {
                     store.isShowingAddAlert.toggle()
@@ -309,16 +298,16 @@ struct iOSContentView: View {
     let viewContext: NSManagedObjectContext
     let hosts: FetchedResults<Host>
     @ObservedObject var store: Store
-    
+
     // Add explicit initializer with internal access level
     init(viewContext: NSManagedObjectContext, hosts: FetchedResults<Host>, store: Store) {
         self.viewContext = viewContext
         self.hosts = hosts
         self.store = store
     }
-    
+
     var body: some View {
         EmptyView()
     }
 }
-#endif 
+#endif

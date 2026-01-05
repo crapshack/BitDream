@@ -1,10 +1,3 @@
-//
-//  ServerList.swift
-//  BitDream
-//
-//  Created by Austin Smith on 12/29/22.
-//
-
 import SwiftUI
 import CoreData
 import KeychainAccess
@@ -14,7 +7,7 @@ import KeychainAccess
 struct ServerList: View {
     @ObservedObject var store: Store
     var viewContext: NSManagedObjectContext
-    
+
     var body: some View {
         // Use NavigationStack for iOS to handle navigation properly
         // This ensures the navigation context is established at this level
@@ -62,16 +55,16 @@ func deleteServer(
             currentStore.host = nil
             // Remove from UserDefaults
             UserDefaults.standard.removeObject(forKey: UserDefaultsKeys.selectedHost)
-            
+
             // Reset any state that might cause crashes when no server is connected
             currentStore.torrents = []
             currentStore.sessionStats = nil
-            
+
             // Stop any background refresh operations that might try to access the host
             currentStore.timer.invalidate()
         }
     }
-    
+
     // Delete the server
     viewContext.delete(host)
     try? viewContext.save()
@@ -84,13 +77,13 @@ func deleteConfirmationMessage(for host: Host, store: Store) -> some View {
     let currentStore = store // Create a local reference to avoid wrapper issues
     VStack(alignment: .leading, spacing: 8) {
         Text("Are you sure you want to delete \(host.name ?? "Unnamed Server")?")
-        
+
         if host == currentStore.host {
             Text("This is your currently connected server. You will be disconnected and connected to another server if available.")
                 .font(.caption)
                 .foregroundColor(.orange)
         }
-        
+
         Text("This action cannot be undone.")
             .font(.caption2)
             .foregroundColor(.secondary)

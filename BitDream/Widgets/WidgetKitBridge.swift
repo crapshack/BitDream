@@ -23,5 +23,3 @@ public enum WidgetKind {
     // Widget kind identifiers shared between app and widget extension
     public static let sessionOverview: String = "SessionOverviewWidget"
 }
-
-

@@ -1,10 +1,3 @@
-//
-//  Utilities.swift
-//  BitDream
-//
-//  Created by Austin Smith on 12/29/22.
-//
-
 import Foundation
 import SwiftUI
 import CoreData
@@ -130,7 +123,7 @@ public let byteCountFormatter: ByteCountFormatter = {
     formatter.allowsNonnumericFormatting = false // Uses '0' instead of 'Zero'
     formatter.countStyle = .file
     formatter.allowedUnits = [.useKB, .useMB, .useGB, .useTB]
-    
+
     return formatter
 }()
 
@@ -142,16 +135,6 @@ func formatSpeed(_ bytesPerSecond: Int64) -> String {
 }
 
 /*--------------------------------------------------------------------------------------------
- Colors
- -------------------------------------------------------------------------------------------*/
-
-// extension Color {
-//     static let primary = Color("AccemtColor")
-//     static let secondary = Color("SecondaryColor")
-//     static let third = Color("ThirdColor")
-// }
-
-/*--------------------------------------------------------------------------------------------
  Refresh transmission data functions
  -------------------------------------------------------------------------------------------*/
 
@@ -161,7 +144,7 @@ func updateList(store: Store, update: @escaping ([Torrent]) -> Void, retry: Int 
     if store.isEditingServerSettings {
         return
     }
-    
+
     let info = makeConfig(store: store)
     getTorrents(config: info.config, auth: info.auth, onReceived: { torrents, err in
         if (err != nil) {
@@ -179,11 +162,11 @@ func updateList(store: Store, update: @escaping ([Torrent]) -> Void, retry: Int 
             DispatchQueue.main.async {
                 // If we were in an error state before, this means we've successfully reconnected
                 let wasInErrorState = store.connectionError
-                
+
                 // Batch all state changes together
                 store.connectionError = false
                 store.connectionErrorMessage = ""
-                
+
                 // Auto-dismiss the alert when connection is restored
                 if wasInErrorState {
                     store.showConnectionErrorAlert = false
@@ -200,7 +183,7 @@ func updateSessionStats(store: Store, update: @escaping (SessionStats) -> Void, 
     if store.isEditingServerSettings {
         return
     }
-    
+
     let info = makeConfig(store: store)
     getSessionStats(config: info.config, auth: info.auth, onReceived: { sessions, err in
         if (err != nil) {
@@ -218,11 +201,11 @@ func updateSessionStats(store: Store, update: @escaping (SessionStats) -> Void, 
             DispatchQueue.main.async {
                 // If we were in an error state before, this means we've successfully reconnected
                 let wasInErrorState = store.connectionError
-                
+
                 // Batch all state changes together
                 store.connectionError = false
                 store.connectionErrorMessage = ""
-                
+
                 // Auto-dismiss the alert when connection is restored
                 if wasInErrorState {
                     store.showConnectionErrorAlert = false
@@ -236,6 +219,37 @@ func updateSessionStats(store: Store, update: @escaping (SessionStats) -> Void, 
     })
 }
 
+/// Updates the session configuration (download directory, version, settings) with retry logic
+func updateSessionInfo(store: Store, update: @escaping (TransmissionSessionResponseArguments) -> Void, retry: Int = 0) {
+    // Skip connection attempts if user is actively editing server settings
+    if store.isEditingServerSettings {
+        return
+    }
+
+    let info = makeConfig(store: store)
+    getSession(config: info.config, auth: info.auth, onResponse: { sessionInfo in
+        // Clear connection error state on successful response
+        DispatchQueue.main.async {
+            let wasInErrorState = store.connectionError
+
+            store.connectionError = false
+            store.connectionErrorMessage = ""
+
+            if wasInErrorState {
+                store.showConnectionErrorAlert = false
+            }
+        }
+        update(sessionInfo)
+    }, onError: { err in
+        if (retry > 3) {
+            print("Session info error after retries: \(err)")
+            store.handleConnectionError(message: "Could not reach server after multiple attempts. Please check your connection.")
+        } else {
+            updateSessionInfo(store: store, update: update, retry: retry + 1)
+        }
+    })
+}
+
 // updates all Transmission data based on current host
 func refreshTransmissionData(store: Store) {
     // update the list of torrents when new host is set
@@ -244,28 +258,26 @@ func refreshTransmissionData(store: Store) {
             store.torrents = vals
         }
     })
-    
+
     updateSessionStats(store: store, update: { vals in
         DispatchQueue.main.async {
             store.sessionStats = vals
         }
     })
-    
-    let info = makeConfig(store: store)
-    // also reset default download directory when new host is set
-    getSession(config: info.config, auth: info.auth, onResponse: { sessionInfo in
+
+    updateSessionInfo(store: store, update: { sessionInfo in
         DispatchQueue.main.async {
+            store.sessionConfiguration = sessionInfo
             store.defaultDownloadDir = sessionInfo.downloadDir
-            
-            // Update version in CoreData
+
+            // Update version in CoreData if host is available
             if let host = store.host {
                 host.version = sessionInfo.version
                 try? PersistenceController.shared.container.viewContext.save()
             }
         }
-    }, onError: { error in
-        print("Failed to get session info: \(error)")
     })
+
     // Also refresh servers index for widgets
     writeServersIndex(store: store)
 }
@@ -286,7 +298,7 @@ func makeConfig(store: Store) -> (config: TransmissionConfig, auth: Transmission
     config.host = host.server
     config.port = Int(host.port)
     config.scheme = host.isSSL ? "https" : "http"
-    
+
     let keychain = Keychain(service: "crapshack.BitDream")
     let username = host.username ?? ""
     let password: String = {
@@ -296,7 +308,7 @@ func makeConfig(store: Store) -> (config: TransmissionConfig, auth: Transmission
         return ""
     }()
     let auth = TransmissionAuth(username: username, password: password)
-    
+
     return (config: config, auth: auth)
 }
 
@@ -334,7 +346,7 @@ func handleTransmissionResponse(
 struct TransmissionErrorAlert: ViewModifier {
     @Binding var isPresented: Bool
     let message: String
-    
+
     func body(content: Content) -> some View {
         content
             .alert("Error", isPresented: $isPresented) {
@@ -361,11 +373,11 @@ struct TorrentInfo {
     let name: String
     let totalSize: Int64
     let fileCount: Int
-    
+
     var formattedSize: String {
         return byteCountFormatter.string(fromByteCount: totalSize)
     }
-    
+
     var fileCountText: String {
         return fileCount == 1 ? "1 file" : "\(fileCount) files"
     }
@@ -380,12 +392,12 @@ func parseTorrentInfo(from data: Data) -> TorrentInfo? {
         let bytes = rawBuffer.bindMemory(to: UInt8.self)
         let count = bytes.count
         guard count > 2, bytes[0] == UInt8(ascii: "d") else { return nil }
-        
+
         // Locate top-level key "info" and capture its value bounds [infoStart, infoEnd)
         var index = 1 // skip initial 'd'
         var infoStart: Int? = nil
         var infoEnd: Int? = nil
-        
+
         while index < count {
             if bytes[index] == UInt8(ascii: "e") { break }
             // Parse key (bencode string: <len>:<key>)
@@ -396,7 +408,7 @@ func parseTorrentInfo(from data: Data) -> TorrentInfo? {
             guard keyEnd <= count else { return nil }
             let isInfoKey = fastKeyEquals(bytes, start: keyStart, length: keyLen, ascii: "info")
             index = keyEnd
-            
+
             // Parse value start at current index; skip or capture if it's info
             if isInfoKey {
                 guard let endIdx = fastSkipBencodeValue(bytes, startIndex: index, upperBound: count) else { return nil }
@@ -408,7 +420,7 @@ func parseTorrentInfo(from data: Data) -> TorrentInfo? {
                 index = endIdx
             }
         }
-        
+
         guard let infoStartIdx = infoStart, let infoEndIdx = infoEnd else { return nil }
         return fastParseInfoDictionary(bytes, startIndex: infoStartIdx, endIndex: infoEndIdx)
     }
@@ -449,7 +461,7 @@ private func fastSkipBencodeValue(_ bytes: UnsafeBufferPointer<UInt8>, startInde
     var idx = startIndex
     guard idx < upperBound else { return nil }
     let tag = bytes[idx]
-    
+
     // Integer: i<digits>e
     if tag == UInt8(ascii: "i") {
         idx &+= 1
@@ -462,7 +474,7 @@ private func fastSkipBencodeValue(_ bytes: UnsafeBufferPointer<UInt8>, startInde
         }
         return nil
     }
-    
+
     // List: l<value>...e
     if tag == UInt8(ascii: "l") {
         idx &+= 1
@@ -472,7 +484,7 @@ private func fastSkipBencodeValue(_ bytes: UnsafeBufferPointer<UInt8>, startInde
         }
         return (idx < upperBound) ? idx + 1 : nil
     }
-    
+
     // Dict: d<key><value>...e
     if tag == UInt8(ascii: "d") {
         idx &+= 1
@@ -489,7 +501,7 @@ private func fastSkipBencodeValue(_ bytes: UnsafeBufferPointer<UInt8>, startInde
         }
         return (idx < upperBound) ? idx + 1 : nil
     }
-    
+
     // String: <len>:<bytes>
     if tag >= UInt8(ascii: "0") && tag <= UInt8(ascii: "9") {
         guard let (len, afterLen) = fastReadDecimalNumber(bytes, startIndex: idx, upperBound: upperBound) else { return nil }
@@ -498,7 +510,7 @@ private func fastSkipBencodeValue(_ bytes: UnsafeBufferPointer<UInt8>, startInde
         guard afterLen < upperBound, bytes[afterLen] == UInt8(ascii: ":"), valueEnd <= upperBound else { return nil }
         return valueEnd
     }
-    
+
     return nil
 }
 
@@ -526,13 +538,13 @@ private func fastParseInfoDictionary(_ bytes: UnsafeBufferPointer<UInt8>, startI
     var idx = startIndex
     guard idx < endIndex, bytes[idx] == UInt8(ascii: "d") else { return nil }
     idx &+= 1
-    
+
     var torrentName: String?
     var totalSize: Int64 = 0
     var fileCount: Int = 0
     var sawFilesList = false
     var sawNameUTF8 = false
-    
+
     while idx < endIndex, bytes[idx] != UInt8(ascii: "e") {
         // Key
         guard let (kLen, afterLen) = fastReadDecimalNumber(bytes, startIndex: idx, upperBound: endIndex) else { return nil }
@@ -540,14 +552,14 @@ private func fastParseInfoDictionary(_ bytes: UnsafeBufferPointer<UInt8>, startI
         let keyStart = afterLen + 1
         let keyEnd = keyStart + kLen
         guard keyEnd <= endIndex else { return nil }
-        
+
         let isNameUTF8Key = fastKeyEquals(bytes, start: keyStart, length: kLen, ascii: "name.utf-8")
         let isNameKey = !isNameUTF8Key && fastKeyEquals(bytes, start: keyStart, length: kLen, ascii: "name")
         let isFilesKey = !isNameKey && fastKeyEquals(bytes, start: keyStart, length: kLen, ascii: "files")
         let isLengthKey = (!isNameKey && !isFilesKey) && fastKeyEquals(bytes, start: keyStart, length: kLen, ascii: "length")
-        
+
         idx = keyEnd
-        
+
         if isNameUTF8Key || isNameKey {
             // Value must be a string: <len>:<bytes>
             guard let (vLen, afterVLen) = fastReadDecimalNumber(bytes, startIndex: idx, upperBound: endIndex) else { return nil }
@@ -577,7 +589,7 @@ private func fastParseInfoDictionary(_ bytes: UnsafeBufferPointer<UInt8>, startI
                 continue
             }
             idx &+= 1 // skip 'l'
-            
+
             while idx < endIndex, bytes[idx] != UInt8(ascii: "e") {
                 guard idx < endIndex, bytes[idx] == UInt8(ascii: "d") else {
                     // Unexpected item, skip
@@ -586,10 +598,10 @@ private func fastParseInfoDictionary(_ bytes: UnsafeBufferPointer<UInt8>, startI
                     continue
                 }
                 idx &+= 1 // into dict
-                
+
                 var fileLength: Int64 = 0
                 var countedThisFile = false
-                
+
                 while idx < endIndex, bytes[idx] != UInt8(ascii: "e") {
                     guard let (fkLen, fAfterLen) = fastReadDecimalNumber(bytes, startIndex: idx, upperBound: endIndex) else { return nil }
                     guard fAfterLen < endIndex, bytes[fAfterLen] == UInt8(ascii: ":") else { return nil }
@@ -598,7 +610,7 @@ private func fastParseInfoDictionary(_ bytes: UnsafeBufferPointer<UInt8>, startI
                     guard fkEnd <= endIndex else { return nil }
                     let isLength = fastKeyEquals(bytes, start: fkStart, length: fkLen, ascii: "length")
                     idx = fkEnd
-                    
+
                     if isLength {
                         // Expect integer value i<digits>e
                         guard idx < endIndex, bytes[idx] == UInt8(ascii: "i") else {
@@ -625,14 +637,14 @@ private func fastParseInfoDictionary(_ bytes: UnsafeBufferPointer<UInt8>, startI
                         idx = next
                     }
                 }
-                
+
                 // Close file dict
                 guard idx < endIndex, bytes[idx] == UInt8(ascii: "e") else { return nil }
                 idx &+= 1
                 totalSize &+= fileLength
                 if !countedThisFile { fileCount &+= 1; countedThisFile = true }
             }
-            
+
             // Close files list
             guard idx < endIndex, bytes[idx] == UInt8(ascii: "e") else { return nil }
             idx &+= 1
@@ -662,7 +674,7 @@ private func fastParseInfoDictionary(_ bytes: UnsafeBufferPointer<UInt8>, startI
             guard let next = fastSkipBencodeValue(bytes, startIndex: idx, upperBound: endIndex) else { return nil }
             idx = next
         }
-        
+
         // Early exit if we have all we need
         if let name = torrentName {
             if sawFilesList {
@@ -672,7 +684,7 @@ private func fastParseInfoDictionary(_ bytes: UnsafeBufferPointer<UInt8>, startI
             }
         }
     }
-    
+
     guard let name = torrentName else { return nil }
     let resolvedCount = fileCount > 0 ? fileCount : (totalSize > 0 ? 1 : 0)
     return TorrentInfo(name: name, totalSize: totalSize, fileCount: max(resolvedCount, 1))
