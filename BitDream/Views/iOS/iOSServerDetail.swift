@@ -89,7 +89,7 @@ struct iOSServerDetail: View {
                 Section(header: Text("Authentication")) {
                     HStack {
                         Text("Username")
-                        TextField("username",text: $userInput)
+                        TextField("username", text: $userInput)
                             .multilineTextAlignment(.trailing)
                             .autocapitalization(.none)
                             // .textInputAutocapitalization(.never)
@@ -106,7 +106,7 @@ struct iOSServerDetail: View {
                     Button(role: .destructive, action: {
                         showingDeleteConfirmation = true
                     }, label: {
-                        HStack{
+                        HStack {
                             Image(systemName: "trash")
                             Text("Delete Server")
                             Spacer()
@@ -115,7 +115,7 @@ struct iOSServerDetail: View {
                 }
             }
             .onAppear {
-                if(!isAddNew) {
+                if (!isAddNew) {
                     if let host = host {
                         loadServerData(host: host, keychain: keychain) { name, def, hostIn, port, ssl, user, pass in
                             nameInput = name

@@ -436,5 +436,3 @@ struct SessionOverviewView_Previews: PreviewProvider {
     }
 }
 #endif
-
-

@@ -103,9 +103,9 @@ struct iOSContentView: View {
             SettingsView(store: store)
         }
     }
-    
+
     // MARK: - iOS Views
-    
+
     private var torrentRows: some View {
         Group {
             if store.torrents.isEmpty {
@@ -133,9 +133,9 @@ struct iOSContentView: View {
             }
         }
     }
-    
+
     // MARK: - Toolbar Items
-    
+
     private var serverToolbarItem: some ToolbarContent {
         ToolbarItem(placement: .automatic) {
             Menu {
@@ -168,7 +168,7 @@ struct iOSContentView: View {
             }
         }
     }
-    
+
     private var actionToolbarItems: some ToolbarContent {
         ToolbarItemGroup(placement: .automatic) {
             Menu {
@@ -212,9 +212,9 @@ struct iOSContentView: View {
                             }
                         }
                     }
-                    
+
                     Divider()
-                    
+
                     // Sort order
                     Button {
                         sortOrder = .ascending
@@ -227,7 +227,7 @@ struct iOSContentView: View {
                             }
                         }
                     }
-                    
+
                     Button {
                         sortOrder = .descending
                     } label: {
@@ -242,9 +242,9 @@ struct iOSContentView: View {
                 } label: {
                     Label("Sort", systemImage: "arrow.up.arrow.down")
                 }.environment(\.menuOrder, .fixed)
-                
+
                 Divider()
-                
+
                 Button(action: {
                     playPauseAllTorrents(start: false, info: makeConfig(store: store), onResponse: { response in
                         updateList(store: store, update: {_ in})
@@ -252,7 +252,7 @@ struct iOSContentView: View {
                 }) {
                     Label("Pause All", systemImage: "pause")
                 }
-                
+
                 Button(action: {
                     playPauseAllTorrents(start: true, info: makeConfig(store: store), onResponse: { response in
                         updateList(store: store, update: {_ in})
@@ -260,9 +260,9 @@ struct iOSContentView: View {
                 }) {
                     Label("Resume All", systemImage: "play")
                 }
-                
+
                 Divider()
-                
+
                 Button(action: {
                     store.showSettings.toggle()
                 }) {
@@ -273,7 +273,7 @@ struct iOSContentView: View {
             }
         }
     }
-    
+
     // MARK: - Bottom Toolbar
     
     private var bottomToolbarItems: some ToolbarContent {

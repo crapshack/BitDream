@@ -223,7 +223,7 @@ struct macOSTorrentDetail: View {
             )
             .frame(minWidth: 1000, minHeight: 700)
         }
-        .onAppear{
+        .onAppear {
             // Use shared function to fetch files
             fetchTorrentFiles(transferId: torrent.id, store: store) { fetchedFiles, fetchedStats in
                 files = fetchedFiles

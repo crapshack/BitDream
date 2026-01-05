@@ -153,5 +153,3 @@ final class AppFileOpenDelegate: NSObject, NSApplicationDelegate, ObservableObje
     }
 }
 #endif
-
-

@@ -5,7 +5,6 @@ import Foundation
 import Combine
 import UniformTypeIdentifiers
 
-
 @main
 struct BitDreamApp: App {
     let persistenceController = PersistenceController.shared

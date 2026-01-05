@@ -49,5 +49,3 @@ public struct ServerIndex: Codable, Equatable {
         self.servers = servers
     }
 }
-
-

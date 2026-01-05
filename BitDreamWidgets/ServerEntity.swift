@@ -35,5 +35,3 @@ struct ServerQuery: EntityQuery {
         return index.servers.map { ServerEntity(id: $0.id, name: $0.name) }
     }
 }
-
-

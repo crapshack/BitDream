@@ -549,12 +549,11 @@ struct NetworkContent: View {
                         }
                     }
                     
-                Button("Update Blocklist") {
+                    Button("Update Blocklist") {
                         updateBlocklist(editModel: editModel)
                     }
-                .disabled(editModel.isUpdatingBlocklist)
-                
-                    
+                    .disabled(editModel.isUpdatingBlocklist)
+
                     if let blocklistUpdateResult = editModel.blocklistUpdateResult {
                         Text(blocklistUpdateResult)
                             .font(.caption)

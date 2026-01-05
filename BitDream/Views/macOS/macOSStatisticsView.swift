@@ -120,5 +120,3 @@ struct macOSStatisticsView: View {
     }
 }
 #endif
-
-

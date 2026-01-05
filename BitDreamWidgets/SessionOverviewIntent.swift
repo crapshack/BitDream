@@ -18,5 +18,3 @@ struct SessionOverviewIntent: WidgetConfigurationIntent {
         self.server = server
     }
 }
-
-

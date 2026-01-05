@@ -171,7 +171,7 @@ struct iOSTorrentDetail: View {
                     })
                 }
             }
-            .onAppear{
+            .onAppear {
                 // Use shared function to fetch files
                 fetchTorrentFiles(transferId: torrent.id, store: store) { fetchedFiles, fetchedStats in
                     files = fetchedFiles
