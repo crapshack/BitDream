@@ -1,10 +1,3 @@
-//
-//  AppBadgeManager.swift
-//  BitDream
-//
-//  Created by AI Assistant on current date
-//
-
 import SwiftUI
 import UserNotifications
 

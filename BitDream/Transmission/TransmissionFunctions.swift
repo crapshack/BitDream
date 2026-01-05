@@ -1,10 +1,3 @@
-//
-//  TransmissionFunctions.swift
-//  BitDream
-//
-//  Created by Austin Smith on 12/29/22.
-//
-
 import Foundation
 
 var TOKEN_HEAD = "x-transmission-session-id"

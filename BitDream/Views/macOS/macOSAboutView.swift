@@ -1,10 +1,3 @@
-//
-//  macOSAboutView.swift
-//  BitDream
-//
-//  Created by Assistant on 1/27/25.
-//
-
 #if os(macOS)
 import SwiftUI
 

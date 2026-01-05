@@ -1,10 +1,3 @@
-//
-//  Store.swift
-//  BitDream
-//
-//  Created by Austin Smith on 12/29/22.
-//
-
 import SwiftUI
 import Foundation
 import KeychainAccess

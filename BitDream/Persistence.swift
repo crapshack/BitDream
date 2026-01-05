@@ -1,10 +1,3 @@
-//
-//  Persistence.swift
-//  BitDream
-//
-//  Created by Austin Smith on 12/29/22.
-//
-
 import CoreData
 
 struct PersistenceController {

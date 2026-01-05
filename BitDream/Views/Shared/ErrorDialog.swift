@@ -1,10 +1,3 @@
-//
-//  ErrorDialog.swift
-//  BitDream
-//
-//  Created by Austin Smith on 12/29/22.
-//
-
 import Foundation
 import SwiftUI
 

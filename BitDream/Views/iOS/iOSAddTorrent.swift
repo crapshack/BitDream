@@ -1,10 +1,3 @@
-//
-//  iOSAddTorrent.swift
-//  BitDream
-//
-//  Created by Austin Smith on 3/10/24.
-//
-
 import Foundation
 import SwiftUI
 import KeychainAccess
