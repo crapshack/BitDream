@@ -146,6 +146,16 @@ class Store: NSObject, ObservableObject {
         self.server = Server(config: config, auth: auth)
         self.host = host
 
+        // Clear local state now so UI/actions can’t target stale torrents while the new host connects
+        self.torrents = []
+        self.sessionStats = nil
+        self.sessionConfiguration = nil
+
+        // Kick off refresh loop immediately so transient session failures don’t leave the app idle
+        timer.invalidate()
+        refreshTransmissionData(store: self)
+        startTimer()
+
         // Establish connection first, then start data refresh
         getSession(config: config, auth: auth, onResponse: { sessionInfo in
             DispatchQueue.main.async {
@@ -155,12 +165,6 @@ class Store: NSObject, ObservableObject {
                 // Store the version in CoreData
                 host.version = sessionInfo.version
                 try? PersistenceController.shared.container.viewContext.save()
-
-                // Refresh data immediately after setting new host
-                refreshTransmissionData(store: self)
-
-                // Begin auto-refresh of data
-                self.startTimer()
             }
         }, onError: { error in
             print("Failed to get session info: \(error)")
