@@ -44,10 +44,16 @@ class Store: NSObject, ObservableObject {
     @Published var debugBrief: String = ""
     @Published var debugMessage: String = ""
 
+    enum ConnectionStatus {
+        case connecting
+        case connected
+        case reconnecting
+    }
+
+    @Published var connectionStatus: ConnectionStatus = .connecting
     @Published var lastRefreshAt: Date?
     @Published var lastErrorMessage: String = ""
     @Published var nextRetryAt: Date?
-    @Published var isReconnecting: Bool = false
 
     @Published var showConnectionErrorAlert: Bool = false
     @Published var isEditingServerSettings: Bool = false  // Flag to pause reconnection attempts
@@ -78,10 +84,11 @@ class Store: NSObject, ObservableObject {
     @Published var showingMenuRemoveConfirmation = false
 
     var timer: Timer = Timer()
+    private var retryTimer: Timer?
     private var reconnectBackoff = ExponentialBackoff(base: 1, maxDelay: 30)
 
     var canAttemptReconnect: Bool {
-        guard isReconnecting else { return true }
+        guard connectionStatus == .reconnecting else { return true }
         guard let nextRetryAt = nextRetryAt else { return true }
         return Date() >= nextRetryAt
     }
@@ -146,6 +153,8 @@ class Store: NSObject, ObservableObject {
         if let current = self.host, current.objectID == host.objectID {
             return
         }
+        cancelRetryTimer()
+        markConnecting()
         var config = TransmissionConfig()
         config.host = host.server
         config.port = Int(host.port)
@@ -223,17 +232,53 @@ class Store: NSObject, ObservableObject {
     }
 
     func resetReconnectState() {
-        isReconnecting = false
         nextRetryAt = nil
         reconnectBackoff.reset()
+        cancelRetryTimer()
         showConnectionErrorAlert = false
+    }
+
+    func cancelRetryTimer() {
+        retryTimer?.invalidate()
+        retryTimer = nil
+    }
+
+    func scheduleRetryTimer() {
+        cancelRetryTimer()
+        guard let nextRetryAt else { return }
+        let delay = max(0, nextRetryAt.timeIntervalSinceNow)
+        retryTimer = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { [weak self] _ in
+            guard let self else { return }
+            if self.isEditingServerSettings {
+                return
+            }
+            refreshTransmissionData(store: self)
+        }
+    }
+
+    func markConnecting() {
+        DispatchQueue.main.async {
+            self.connectionStatus = .connecting
+        }
     }
 
     func markConnected() {
         DispatchQueue.main.async {
             self.resetReconnectState()
+            self.connectionStatus = .connected
             self.lastErrorMessage = ""
             self.lastRefreshAt = Date()
+            self.timer.invalidate()
+            self.startTimer()
+        }
+    }
+
+    func retryNow() {
+        DispatchQueue.main.async {
+            self.reconnectBackoff.reset()
+            self.nextRetryAt = nil
+            self.cancelRetryTimer()
+            refreshTransmissionData(store: self)
         }
     }
 
@@ -241,9 +286,14 @@ class Store: NSObject, ObservableObject {
     func handleConnectionError(message: String) {
         DispatchQueue.main.async {
             let now = Date()
+            let wasReconnecting = self.connectionStatus == .reconnecting
 
             self.lastErrorMessage = message
-            self.isReconnecting = true
+            self.connectionStatus = .reconnecting
+
+            if !wasReconnecting {
+                self.timer.invalidate()
+            }
 
             if let nextRetryAt = self.nextRetryAt, nextRetryAt > now {
                 #if os(iOS)
@@ -256,6 +306,7 @@ class Store: NSObject, ObservableObject {
 
             let scheduledDelay = self.reconnectBackoff.nextDelay()
             self.nextRetryAt = now.addingTimeInterval(scheduledDelay)
+            self.scheduleRetryTimer()
 
             #if os(iOS)
             self.showConnectionErrorAlert = true

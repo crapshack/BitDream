@@ -616,8 +616,8 @@ struct macOSContentView: View {
         VStack(spacing: 0) {
             StatsHeaderView(store: store)
 
-            if store.isReconnecting {
-                ConnectionBannerView(message: store.lastErrorMessage)
+            if store.connectionStatus == Store.ConnectionStatus.reconnecting {
+                ConnectionBannerView(retryAt: store.nextRetryAt)
             }
 
             VStack {
@@ -771,7 +771,9 @@ struct macOSContentView: View {
 }
 
 private struct ConnectionBannerView: View {
-    let message: String
+    @Environment(\.openWindow) private var openWindow
+
+    let retryAt: Date?
 
     var body: some View {
         HStack(spacing: 12) {
@@ -779,22 +781,37 @@ private struct ConnectionBannerView: View {
                 .foregroundColor(.orange)
                 .font(.system(size: 16, weight: .semibold))
             VStack(alignment: .leading, spacing: 2) {
-                Text("Reconnecting…")
+                Text("Disconnected")
                     .font(.subheadline)
                     .fontWeight(.semibold)
-                if !message.isEmpty {
-                    Text(message)
+                TimelineView(.periodic(from: .now, by: 1)) { context in
+                    Text(nextRetryText(at: context.date))
                         .font(.caption)
                         .foregroundColor(.secondary)
-                        .lineLimit(2)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
                 }
             }
             Spacer()
+            Button("Connection Info") {
+                openWindow(id: "connection-info")
+            }
+            .buttonStyle(.bordered)
+            .help("Open Connection Info window")
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
         .background(.ultraThinMaterial)
         .overlay(Divider(), alignment: .bottom)
+    }
+
+    private func nextRetryText(at date: Date) -> String {
+        guard let retryAt else { return "Retrying now..." }
+        let remaining = max(0, Int(retryAt.timeIntervalSince(date)))
+        if remaining > 0 {
+            return "Next retry in \(remaining)s"
+        }
+        return "Retrying now..."
     }
 }
 

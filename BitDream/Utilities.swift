@@ -209,9 +209,6 @@ func pollTransmissionData(store: Store) {
         return
     }
 
-    if !store.canAttemptReconnect {
-        return
-    }
 
     let info = makeConfig(store: store)
     getSessionStats(config: info.config, auth: info.auth, onReceived: { sessions, err in

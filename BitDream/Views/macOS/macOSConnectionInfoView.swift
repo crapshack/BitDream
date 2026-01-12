@@ -1,14 +1,14 @@
 import SwiftUI
 
 #if os(macOS)
-struct macOSConnectionDebugView: View {
+struct macOSConnectionInfoView: View {
     @EnvironmentObject var store: Store
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Form {
                 Section("Status") {
-                    keyValueRow("Connection", statusText)
+                    connectionRow
                     lastRefreshRow
                 }
 
@@ -24,7 +24,47 @@ struct macOSConnectionDebugView: View {
     }
 
     private var statusText: String {
-        store.isReconnecting ? "Reconnecting" : "Connected"
+        switch store.connectionStatus {
+        case .connecting:
+            return "Connecting..."
+        case .connected:
+            return "Connected"
+        case .reconnecting:
+            return "Disconnected"
+        }
+    }
+
+    private var statusColor: Color {
+        switch store.connectionStatus {
+        case .connecting:
+            return .blue
+        case .connected:
+            return .green
+        case .reconnecting:
+            return .orange
+        }
+    }
+
+    private var connectionRow: some View {
+        HStack(spacing: 12) {
+            Text("Connection")
+            Spacer(minLength: 16)
+            if store.connectionStatus == Store.ConnectionStatus.reconnecting {
+                Button(action: {
+                    store.retryNow()
+                }) {
+                    Image(systemName: "arrow.clockwise")
+                        .imageScale(.small)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .help("Retry now")
+                .accessibilityLabel("Retry now")
+            }
+            Text(statusText)
+                .font(.system(.body, design: .monospaced))
+                .foregroundColor(statusColor)
+        }
     }
 
     private var nextRetryRow: some View {
@@ -45,7 +85,7 @@ struct macOSConnectionDebugView: View {
         if remaining > 0 {
             return "\(remaining)s"
         }
-        return store.isReconnecting ? "Retrying now…" : "-"
+        return store.connectionStatus == Store.ConnectionStatus.reconnecting ? "Retrying now…" : "-"
     }
 
     private var lastErrorText: String {

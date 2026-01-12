@@ -205,8 +205,8 @@ struct BitDreamApp: App {
         }
         .windowResizability(.contentSize)
 
-        Window("Connection Debug", id: "connection-debug") {
-            macOSConnectionDebugView()
+        Window("Connection Info", id: "connection-info") {
+            macOSConnectionInfoView()
                 .environment(\.managedObjectContext, persistenceController.container.viewContext)
                 .environmentObject(store)
                 .accentColor(themeManager.accentColor)
