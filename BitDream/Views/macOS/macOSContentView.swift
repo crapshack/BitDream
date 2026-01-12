@@ -570,7 +570,7 @@ struct macOSContentView: View {
                         // Clear selection when changing host
                         selectedTorrentIds.removeAll()
                         // Force refresh data when changing host
-                        updateList(store: store, update: { _ in })
+                        refreshTransmissionData(store: store)
                     } label: {
                         HStack {
                             Label(host.name ?? "Unnamed Server", systemImage: "server.rack")
@@ -615,6 +615,10 @@ struct macOSContentView: View {
     private var detailView: some View {
         VStack(spacing: 0) {
             StatsHeaderView(store: store)
+
+            if store.connectionStatus == Store.ConnectionStatus.reconnecting {
+                ConnectionBannerView(retryAt: store.nextRetryAt)
+            }
 
             VStack {
                 // Torrent list
@@ -720,18 +724,7 @@ struct macOSContentView: View {
         .navigationSubtitle(navigationSubtitle)
 
         .refreshable {
-            updateList(store: store, update: {_ in})
-        }
-        .alert("Connection Error", isPresented: $store.showConnectionErrorAlert) {
-            Button("Edit Server", role: .none) {
-                store.editServers.toggle()
-            }
-            Button("Retry", role: .none) {
-                store.reconnect()
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text(store.connectionErrorMessage)
+            refreshTransmissionData(store: store)
         }
         .alert(
             "Remove \(selectedTorrents.count > 1 ? "\(selectedTorrents.count) Torrents" : "Torrent")",
@@ -774,6 +767,51 @@ struct macOSContentView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
+    }
+}
+
+private struct ConnectionBannerView: View {
+    @Environment(\.openWindow) private var openWindow
+
+    let retryAt: Date?
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "wifi.exclamationmark")
+                .foregroundColor(.orange)
+                .font(.system(size: 16, weight: .semibold))
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Disconnected")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                TimelineView(.periodic(from: .now, by: 1)) { context in
+                    Text(nextRetryText(at: context.date))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
+            }
+            Spacer()
+            Button("Connection Info") {
+                openWindow(id: "connection-info")
+            }
+            .buttonStyle(.bordered)
+            .help("Open Connection Info window")
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(.ultraThinMaterial)
+        .overlay(Divider(), alignment: .bottom)
+    }
+
+    private func nextRetryText(at date: Date) -> String {
+        guard let retryAt else { return "Retrying now..." }
+        let remaining = max(0, Int(retryAt.timeIntervalSince(date)))
+        if remaining > 0 {
+            return "Next retry in \(remaining)s"
+        }
+        return "Retrying now..."
     }
 }
 

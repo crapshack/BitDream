@@ -32,23 +32,25 @@ class Store: NSObject, ObservableObject {
     @Published var magnetQueueDisplayIndex: Int = 0
     @Published var magnetQueueTotal: Int = 0
     @Published var isShowingServerAlert: Bool = false
-    @Published var editServers: Bool = false {
-        didSet {
-            // Set the editing flag when server settings are being edited
-            isEditingServerSettings = editServers
-        }
-    }
+    @Published var editServers: Bool = false
     @Published var showSettings: Bool = false
 
     @Published var isError: Bool = false
     @Published var debugBrief: String = ""
     @Published var debugMessage: String = ""
 
-    @Published var connectionError: Bool = false
-    @Published var connectionErrorMessage: String = ""
+    enum ConnectionStatus {
+        case connecting
+        case connected
+        case reconnecting
+    }
+
+    @Published var connectionStatus: ConnectionStatus = .connecting
+    @Published var lastRefreshAt: Date?
+    @Published var lastErrorMessage: String = ""
+    @Published var nextRetryAt: Date?
 
     @Published var showConnectionErrorAlert: Bool = false
-    @Published var isEditingServerSettings: Bool = false  // Flag to pause reconnection attempts
 
     @Published var sessionConfiguration: TransmissionSessionResponseArguments?
 
@@ -76,6 +78,14 @@ class Store: NSObject, ObservableObject {
     @Published var showingMenuRemoveConfirmation = false
 
     var timer: Timer = Timer()
+    private var retryTimer: Timer?
+    private var reconnectBackoff = ExponentialBackoff(base: 1, maxDelay: 30)
+
+    var canAttemptReconnect: Bool {
+        guard connectionStatus == .reconnecting else { return true }
+        guard let nextRetryAt = nextRetryAt else { return true }
+        return Date() >= nextRetryAt
+    }
 
     override init() {
         super.init()
@@ -137,6 +147,8 @@ class Store: NSObject, ObservableObject {
         if let current = self.host, current.objectID == host.objectID {
             return
         }
+        cancelRetryTimer()
+        markConnecting()
         var config = TransmissionConfig()
         config.host = host.server
         config.port = Int(host.port)
@@ -145,6 +157,7 @@ class Store: NSObject, ObservableObject {
         let auth = TransmissionAuth(username: host.username!, password: readPassword(name: host.name!))
         self.server = Server(config: config, auth: auth)
         self.host = host
+        resetReconnectState()
 
         // Clear all local state so UI/actions can't use stale data from the previous host
         self.torrents = []
@@ -171,25 +184,7 @@ class Store: NSObject, ObservableObject {
 
     func startTimer() {
         self.timer = Timer.scheduledTimer(withTimeInterval: pollInterval, repeats: true, block: { _ in
-            // Skip updates if user is actively editing server settings
-            if self.isEditingServerSettings {
-                return
-            }
-
-            DispatchQueue.main.async {
-                updateList(store: self, update: { vals in
-                    DispatchQueue.main.async {
-                        // Setting @Published properties automatically triggers objectWillChange
-                        self.torrents = vals
-                    }
-                })
-                updateSessionStats(store: self, update: { vals in
-                    DispatchQueue.main.async {
-                        // Setting @Published properties automatically triggers objectWillChange
-                        self.sessionStats = vals
-                    }
-                })
-            }
+            pollTransmissionData(store: self)
         })
     }
 
@@ -197,6 +192,7 @@ class Store: NSObject, ObservableObject {
     func reconnect() {
         // Before attempting reconnection, make sure the alert is dismissed
         self.showConnectionErrorAlert = false
+        resetReconnectState()
 
         if let host = self.host {
             // Try to reconnect to the current host
@@ -224,13 +220,85 @@ class Store: NSObject, ObservableObject {
         })
     }
 
+    func resetReconnectState() {
+        nextRetryAt = nil
+        reconnectBackoff.reset()
+        cancelRetryTimer()
+        showConnectionErrorAlert = false
+    }
+
+    func cancelRetryTimer() {
+        retryTimer?.invalidate()
+        retryTimer = nil
+    }
+
+    func scheduleRetryTimer() {
+        cancelRetryTimer()
+        guard let nextRetryAt else { return }
+        let delay = max(0, nextRetryAt.timeIntervalSinceNow)
+        retryTimer = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { [weak self] _ in
+            guard let self else { return }
+            refreshTransmissionData(store: self)
+        }
+    }
+
+    func markConnecting() {
+        DispatchQueue.main.async {
+            self.connectionStatus = .connecting
+        }
+    }
+
+    func markConnected() {
+        DispatchQueue.main.async {
+            self.resetReconnectState()
+            self.connectionStatus = .connected
+            self.lastErrorMessage = ""
+            self.lastRefreshAt = Date()
+            self.timer.invalidate()
+            self.startTimer()
+        }
+    }
+
+    func retryNow() {
+        DispatchQueue.main.async {
+            self.reconnectBackoff.reset()
+            self.nextRetryAt = nil
+            self.cancelRetryTimer()
+            refreshTransmissionData(store: self)
+        }
+    }
+
     // Method to handle connection errors
     func handleConnectionError(message: String) {
         DispatchQueue.main.async {
-            self.connectionError = true
-            self.connectionErrorMessage = message
+            let now = Date()
+            let wasReconnecting = self.connectionStatus == .reconnecting
+
+            self.lastErrorMessage = message
+            self.connectionStatus = .reconnecting
+
+            if !wasReconnecting {
+                self.timer.invalidate()
+            }
+
+            if let nextRetryAt = self.nextRetryAt, nextRetryAt > now {
+                #if os(iOS)
+                self.showConnectionErrorAlert = true
+                #else
+                self.showConnectionErrorAlert = false
+                #endif
+                return
+            }
+
+            let scheduledDelay = self.reconnectBackoff.nextDelay()
+            self.nextRetryAt = now.addingTimeInterval(scheduledDelay)
+            self.scheduleRetryTimer()
+
+            #if os(iOS)
             self.showConnectionErrorAlert = true
-            self.timer.invalidate()
+            #else
+            self.showConnectionErrorAlert = false
+            #endif
         }
     }
 
@@ -268,5 +336,29 @@ class Store: NSObject, ObservableObject {
                 torrentLabel.lowercased() == label.lowercased()
             }
         }.count
+    }
+}
+
+struct ExponentialBackoff {
+    private(set) var attempt: Int = 0
+    let base: TimeInterval
+    let maxDelay: TimeInterval
+    let jitterRange: ClosedRange<Double>
+
+    init(base: TimeInterval, maxDelay: TimeInterval, jitterRange: ClosedRange<Double> = 0.85...1.15) {
+        self.base = base
+        self.maxDelay = maxDelay
+        self.jitterRange = jitterRange
+    }
+
+    mutating func nextDelay() -> TimeInterval {
+        let exponentialDelay = min(base * pow(2, Double(attempt)), maxDelay)
+        let jitter = Double.random(in: jitterRange)
+        attempt += 1
+        return Swift.max(base, exponentialDelay * jitter)
+    }
+
+    mutating func reset() {
+        attempt = 0
     }
 }
